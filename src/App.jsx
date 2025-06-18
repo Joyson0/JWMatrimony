@@ -1,6 +1,8 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
+import ProtectedRoute from './components/ProtectedRoute'
+import AuthRedirect from './components/AuthRedirect'
 import LoginRegister from './pages/LoginRegister'
 import Home from './pages/Home'
 import OAuthCallback from './pages/OAuthCallback'
@@ -15,10 +17,31 @@ function App() {
         <main>
           <Routes>
             <Route path='/' element={<Home />} />
-            <Route path='/auth' element={<LoginRegister />} />
+            <Route 
+              path='/auth' 
+              element={
+                <AuthRedirect>
+                  <LoginRegister />
+                </AuthRedirect>
+              } 
+            />
             <Route path="/auth/callback" element={<OAuthCallback />} />
-            <Route path="/profile-setup" element={<ProfileSetupPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route 
+              path="/profile-setup" 
+              element={
+                <ProtectedRoute>
+                  <ProfileSetupPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              } 
+            />
           </Routes>
         </main>
       </div>

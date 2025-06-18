@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { account, storage } from '../lib/appwrite';
 import { FiUser, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
 
@@ -10,35 +10,63 @@ const Navbar = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
+  // Listen for profile updates from localStorage or custom events
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      if (user) {
+        fetchUserProfile(user.$id);
+      }
+    };
+
+    // Listen for custom profile update events
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
+    // Also check for updates when location changes (user navigates)
+    if (user) {
+      fetchUserProfile(user.$id);
+    }
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
+  }, [user, location.pathname]);
+
   const checkAuthStatus = async () => {
     try {
       const currentUser = await account.get();
       setUser(currentUser);
-      
-      // Try to get user profile for profile picture
-      try {
-        const { db } = await import('../lib/database');
-        const { Query } = await import('appwrite');
-        const profileResponse = await db.profiles.list([
-          Query.equal('userId', currentUser.$id)
-        ]);
-        
-        if (profileResponse.documents.length > 0) {
-          setUserProfile(profileResponse.documents[0]);
-        }
-      } catch (profileError) {
-        console.log('No profile found or error fetching profile:', profileError);
-      }
+      await fetchUserProfile(currentUser.$id);
     } catch (error) {
       console.log('User not authenticated');
       setUser(null);
+      setUserProfile(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserProfile = async (userId) => {
+    try {
+      const { db } = await import('../lib/database');
+      const { Query } = await import('appwrite');
+      const profileResponse = await db.profiles.list([
+        Query.equal('userId', userId)
+      ]);
+      
+      if (profileResponse.documents.length > 0) {
+        setUserProfile(profileResponse.documents[0]);
+      } else {
+        setUserProfile(null);
+      }
+    } catch (profileError) {
+      console.log('No profile found or error fetching profile:', profileError);
+      setUserProfile(null);
     }
   };
 
@@ -86,7 +114,9 @@ const Navbar = () => {
     
     return (
       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-        {user?.name ? user.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
+        {userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : 
+         user?.name ? user.name.charAt(0).toUpperCase() : 
+         user?.email?.charAt(0).toUpperCase() || 'U'}
       </div>
     );
   };
@@ -166,20 +196,12 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              <div className="flex items-center space-x-4">
-                <Link
-                  to="/auth"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/auth"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
-                >
-                  Sign Up
-                </Link>
-              </div>
+              <Link
+                to="/auth"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+              >
+                Sign In / Sign Up
+              </Link>
             )}
           </div>
 
@@ -234,22 +256,13 @@ const Navbar = () => {
                 </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                <Link
-                  to="/auth"
-                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/auth"
-                  className="block px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Sign Up
-                </Link>
-              </div>
+              <Link
+                to="/auth"
+                className="block mx-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign In / Sign Up
+              </Link>
             )}
           </div>
         )}

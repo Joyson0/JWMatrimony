@@ -10,7 +10,7 @@ const buttonStyle =
 const OAuthButtons = () => {
   const navigate = useNavigate()
   const successUrl = `${window.location.origin}/auth/callback`
-  const failureUrl = `${window.location.origin}/auth}`
+  const failureUrl = `${window.location.origin}/auth`
   
   const handleOAuthLogin = async (provider) => {
     try {

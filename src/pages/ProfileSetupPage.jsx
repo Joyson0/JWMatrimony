@@ -181,6 +181,10 @@ function ProfileSetupPage() {
         console.log('Profile created successfully:', response);
         // Optionally, you might want to set userProfileDocumentId from response.$id here if needed for immediate further actions
       }
+
+      // Dispatch custom event to notify navbar of profile update
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
+      
       alert('Profile setup complete!');
       navigate('/dashboard'); // Redirect to dashboard or home page
     } catch (error) {
