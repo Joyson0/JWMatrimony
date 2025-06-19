@@ -15,8 +15,8 @@ import Step4PartnerPreferences from '../components/wizard/Step4PartnerPreference
 /**
  * Profile Setup Page Component
  * 
- * Multi-step wizard for creating/editing user profiles.
- * Handles both new profile creation and existing profile updates.
+ * Modern multi-step wizard for creating/editing user profiles.
+ * Features smooth animations, progress tracking, and responsive design.
  */
 function ProfileSetupPage() {
   useTitle('Profile Setup Wizard - JW Matrimony');
@@ -119,7 +119,7 @@ function ProfileSetupPage() {
   };
 
   /**
-   * Navigation handlers
+   * Navigation handlers with smooth transitions
    */
   const handleNext = () => {
     setCurrentStep(prev => Math.min(prev + 1, 4));
@@ -222,7 +222,21 @@ function ProfileSetupPage() {
       // Notify navbar of profile update
       window.dispatchEvent(new CustomEvent('profileUpdated'));
       
-      alert('Profile setup complete!');
+      // Success notification with smooth transition
+      const successDiv = document.createElement('div');
+      successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
+      successDiv.textContent = 'Profile setup complete! 🎉';
+      document.body.appendChild(successDiv);
+      
+      setTimeout(() => {
+        successDiv.classList.remove('translate-x-full');
+      }, 100);
+      
+      setTimeout(() => {
+        successDiv.classList.add('translate-x-full');
+        setTimeout(() => document.body.removeChild(successDiv), 300);
+      }, 3000);
+      
       navigate('/dashboard');
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -265,23 +279,37 @@ function ProfileSetupPage() {
     }
   };
 
-  // Loading state
+  // Loading state with modern spinner
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading Profile Data...</p>
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+            <div className="absolute inset-0 rounded-full h-16 w-16 border-4 border-transparent border-r-purple-600 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+          </div>
+          <p className="mt-6 text-gray-600 font-medium">Loading your profile...</p>
+          <p className="text-sm text-gray-500 mt-2">Please wait while we prepare everything for you</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile Setup</h1>
+          <p className="text-gray-600">Complete your profile to find your perfect match</p>
+        </div>
+        
         <ProgressBar currentStep={currentStep} totalSteps={4} />
-        {renderStep()}
+        
+        {/* Step Content with Animation */}
+        <div className="transition-all duration-500 ease-in-out transform">
+          {renderStep()}
+        </div>
       </div>
     </div>
   );

@@ -1,92 +1,195 @@
-// src/components/wizard/Step4PartnerPreferences.jsx
-import React, { useEffect } from 'react'; // Import useEffect
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { partnerPreferencesSchema } from './ValidationSchemas';
 import WizardNavigation from './WizardNavigation';
+import { FiHeart, FiUsers, FiCalendar, FiActivity } from 'react-icons/fi';
 
-// Add currentStep and totalSteps to props for consistency with other steps
+/**
+ * Step 4: Partner Preferences Form
+ * Final step with comprehensive partner criteria
+ */
 function Step4PartnerPreferences({ formData, updateFormData, onBack, onSubmit, currentStep, totalSteps }) {
-  // Destructure reset and getValues from useForm
   const { register, handleSubmit, formState: { errors }, reset, getValues } = useForm({
     resolver: yupResolver(partnerPreferencesSchema),
-    // Pass the entire formData for defaultValues, as the schema expects a top-level 'partnerPreferences' key
     defaultValues: formData,
   });
 
-  // --- CRUCIAL CHANGE: Use useEffect to reset form when formData prop changes ---
   useEffect(() => {
-    // console.log('Step4PartnerPreferences: useEffect triggered. Received formData prop:', formData); // Debug
-    reset(formData); // Reset the form with the latest formData
-    // console.log('Step4PartnerPreferences: Form values after reset():', getValues()); // Debug
-  }, [formData, reset, getValues]); // Depend on formData and the reset/getValues functions
-
+    reset(formData);
+  }, [formData, reset]);
 
   const finalSubmit = (data) => {
-    console.log("--- Step 4 finalSubmit ---");
-  console.log("Step 4 finalSubmit: Data received FROM FORM (before updateFormData):", data);
-  console.log("Step 4 finalSubmit: Value of data.partnerPreferences:", data.partnerPreferences);
-  console.log("Step 4 finalSubmit: Type of data.partnerPreferences:", typeof data.partnerPreferences);
-
-
-    // `data` from useForm's handleSubmit will already be structured like:
-    // `{ partnerPreferences: { minAge: ..., maxHeight: ..., preferredMaritalStatuses: [...] } }`
-    // So you can pass `data` directly to `updateFormData`.
-    // The parent's updateFormData will then correctly merge `newData.partnerPreferences`.
-    // updateFormData(data);
-
-    // Trigger final submission in parent
+    console.log("Step 4 finalSubmit: Data received FROM FORM:", data);
     onSubmit(data);
   };
 
   return (
-    <form onSubmit={handleSubmit(finalSubmit)} style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-      <h2>Step 4: Partner Preferences</h2>
-
-      <div style={{ marginBottom: '15px' }}>
-        <label>Age Range (Min-Max):</label>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {/* These are correctly registered with dot notation */}
-          <input type="number" {...register('partnerPreferences.minAge')} placeholder="Min Age" style={{ width: 'calc(50% - 5px)', padding: '8px' }} />
-          <input type="number" {...register('partnerPreferences.maxAge')} placeholder="Max Age" style={{ width: 'calc(50% - 5px)', padding: '8px' }} />
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-rose-600 to-pink-600 px-8 py-6">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+            <FiHeart className="w-6 h-6" />
+            Partner Preferences
+          </h2>
+          <p className="text-rose-100 mt-2">Tell us about your ideal life partner</p>
         </div>
-        {/* --- CRUCIAL CHANGE: Error paths must also be nested --- */}
-        {errors.partnerPreferences?.minAge && <p style={{ color: 'red', fontSize: '0.8em' }}>{errors.partnerPreferences.minAge.message}</p>}
-        {errors.partnerPreferences?.maxAge && <p style={{ color: 'red', fontSize: '0.8em' }}>{errors.partnerPreferences.maxAge.message}</p>}
+
+        <form onSubmit={handleSubmit(finalSubmit)} className="p-8">
+          {/* Age Preferences */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <FiCalendar className="w-5 h-5" />
+              Age Preferences
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Minimum Age *
+                </label>
+                <input
+                  type="number"
+                  {...register('partnerPreferences.minAge')}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all duration-200"
+                  placeholder="e.g., 25"
+                  min="18"
+                  max="100"
+                />
+                {errors.partnerPreferences?.minAge && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <span className="w-4 h-4">⚠️</span>
+                    {errors.partnerPreferences.minAge.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Maximum Age *
+                </label>
+                <input
+                  type="number"
+                  {...register('partnerPreferences.maxAge')}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all duration-200"
+                  placeholder="e.g., 35"
+                  min="18"
+                  max="100"
+                />
+                {errors.partnerPreferences?.maxAge && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <span className="w-4 h-4">⚠️</span>
+                    {errors.partnerPreferences.maxAge.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Height Preferences */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <FiActivity className="w-5 h-5" />
+              Height Preferences
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Minimum Height (cm) *
+                </label>
+                <input
+                  type="number"
+                  {...register('partnerPreferences.minHeight')}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all duration-200"
+                  placeholder="e.g., 150"
+                  min="100"
+                  max="250"
+                />
+                {errors.partnerPreferences?.minHeight && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <span className="w-4 h-4">⚠️</span>
+                    {errors.partnerPreferences.minHeight.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Maximum Height (cm) *
+                </label>
+                <input
+                  type="number"
+                  {...register('partnerPreferences.maxHeight')}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all duration-200"
+                  placeholder="e.g., 180"
+                  min="100"
+                  max="250"
+                />
+                {errors.partnerPreferences?.maxHeight && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <span className="w-4 h-4">⚠️</span>
+                    {errors.partnerPreferences.maxHeight.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Marital Status Preferences */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <FiUsers className="w-5 h-5" />
+              Preferred Marital Status *
+            </h3>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {['Never Married', 'Divorced', 'Widowed', 'Annulled'].map(status => (
+                <label key={status} className="flex items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    value={status}
+                    {...register('partnerPreferences.preferredMaritalStatuses')}
+                    className="w-4 h-4 text-rose-600 border-gray-300 rounded focus:ring-rose-500"
+                  />
+                  <span className="ml-3 text-sm font-medium text-gray-700">{status}</span>
+                </label>
+              ))}
+            </div>
+            {errors.partnerPreferences?.preferredMaritalStatuses && (
+              <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                <span className="w-4 h-4">⚠️</span>
+                {errors.partnerPreferences.preferredMaritalStatuses.message}
+              </p>
+            )}
+          </div>
+
+          {/* Completion Message */}
+          <div className="bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-lg p-6 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center">
+                <FiHeart className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-800">Almost Done!</h4>
+                <p className="text-gray-600 text-sm">
+                  You're about to complete your profile setup. Click "Complete Profile" to finish.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <WizardNavigation 
+            currentStep={currentStep} 
+            totalSteps={totalSteps} 
+            onBack={onBack}
+            onNext={handleSubmit(finalSubmit)}
+            isLastStep={true}
+          />
+        </form>
       </div>
-
-      <div style={{ marginBottom: '15px' }}>
-        <label>Height Range (Min-Max cm):</label>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {/* Correctly registered */}
-          <input type="number" {...register('partnerPreferences.minHeight')} placeholder="Min Height" style={{ width: 'calc(50% - 5px)', padding: '8px' }} />
-          <input type="number" {...register('partnerPreferences.maxHeight')} placeholder="Max Height" style={{ width: 'calc(50% - 5px)', padding: '8px' }} />
-        </div>
-        {/* --- CRUCIAL CHANGE: Error paths must also be nested --- */}
-        {errors.partnerPreferences?.minHeight && <p style={{ color: 'red', fontSize: '0.8em' }}>{errors.partnerPreferences.minHeight.message}</p>}
-        {errors.partnerPreferences?.maxHeight && <p style={{ color: 'red', fontSize: '0.8em' }}>{errors.partnerPreferences.maxHeight.message}</p>}
-      </div>
-
-      <div style={{ marginBottom: '15px' }}>
-        <label>Preferred Marital Statuses:</label>
-        {['Never Married', 'Divorced', 'Widowed', 'Annulled'].map(status => (
-          <label key={status} style={{ marginRight: '15px', display: 'inline-block' }}>
-            {/* Correctly registered */}
-            <input type="checkbox" value={status} {...register('partnerPreferences.preferredMaritalStatuses')} /> {status}
-          </label>
-        ))}
-        {/* --- CRUCIAL CHANGE: Error paths must also be nested --- */}
-        {errors.partnerPreferences?.preferredMaritalStatuses && <p style={{ color: 'red', fontSize: '0.8em' }}>{errors.partnerPreferences.preferredMaritalStatuses.message}</p>}
-      </div>
-
-      {/* Add more partner preference fields (Castes, States, Occupations etc.) 
-          Remember to use `partnerPreferences.fieldName` for register calls and 
-          `errors.partnerPreferences?.fieldName` for displaying errors.
-      */}
-
-      {/* Pass currentStep and totalSteps from props, for consistency */}
-      <WizardNavigation currentStep={currentStep} totalSteps={totalSteps} onBack={onBack} onNext={handleSubmit(finalSubmit)} isLastStep={true} />
-    </form>
+    </div>
   );
 }
 
