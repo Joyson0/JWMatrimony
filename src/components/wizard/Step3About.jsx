@@ -4,6 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { aboutSchema } from './ValidationSchemas';
 import WizardNavigation from './WizardNavigation';
 import { FiUser, FiBook, FiBriefcase, FiDollarSign, FiHeart, FiUtensils } from 'react-icons/fi';
+import {FaUtensils} from 'react-icons/fa'
 
 /**
  * Step 3: About Yourself & Lifestyle Form
@@ -133,7 +134,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
               {/* Diet */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <FiUtensils className="w-4 h-4" />
+                  <FaUtensils className="w-4 h-4" />
                   Diet Preference
                 </label>
                 <select
