@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { aboutSchema } from './ValidationSchemas';
 import WizardNavigation from './WizardNavigation';
-import { FiUser, FiBook, FiBriefcase, FiDollarSign, FiHeart, FiUtensils } from 'react-icons/fi';
+import { FiUser, FiBook, FiBriefcase, FiDollarSign, FiHeart } from 'react-icons/fi';
 import {FaUtensils} from 'react-icons/fa'
 
 /**
