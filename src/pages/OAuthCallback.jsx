@@ -1,82 +1,94 @@
-// src/pages/OAuthCallback.jsx
 import React, { useEffect, useState } from 'react';
-import { account, databases } from '../lib/appwrite'; // Adjust path
+import { account } from '../lib/appwrite';
 import { db } from '../lib/database';
 import { useNavigate } from 'react-router-dom';
-import { Query } from 'appwrite'; // Import Query for database checks
-// import useTitle from '../hooks/useTitle'; // Your custom hook
+import { Query } from 'appwrite';
 
-// Replace with your actual Database and Collection IDs
-const PROFILES_DATABASE_ID = 'YOUR_PROFILES_DATABASE_ID';
-const PROFILES_COLLECTION_ID = 'YOUR_PROFILES_COLLECTION_ID';
-
+/**
+ * OAuth Callback Page Component
+ * 
+ * Handles the OAuth redirect after successful authentication.
+ * Determines whether to redirect to dashboard (existing user) or profile setup (new user).
+ */
 function OAuthCallback() {
-//   useTitle('Processing Authentication...');
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        // Appwrite automatically handles the session creation/recovery
-        // when the user lands on this page after an OAuth redirect.
-        // We just need to fetch the current user's session to confirm.
-        const user = await account.get(); // Get currently logged-in user
+    handleCallback();
+  }, []);
 
-        if (user) {
-          console.log("User successfully logged in/registered:", user);
+  /**
+   * Handle OAuth callback and determine user flow
+   */
+  const handleCallback = async () => {
+    try {
+      // Get the authenticated user
+      const user = await account.get();
 
-          // --- IMPORTANT LOGIC: Check if user has a complete profile ---
-          try {
-            const response = await db.profiles.list(
-              [Query.equal('userId', user.$id)] // Check if a profile exists for this user ID
-            );
+      if (user) {
+        console.log("User successfully logged in/registered:", user);
 
-            if (response.documents.length > 0) {
-              // User has a profile, redirect to dashboard
-              console.log("User has existing profile. Redirecting to dashboard.");
-              navigate('/dashboard'); // Or '/home', etc.
-            } else {
-              // User is new or doesn't have a profile yet, redirect to profile setup
-              console.log("User is new or profile is incomplete. Redirecting to profile setup.");
-              navigate('/profile-setup'); // Your multi-step profile wizard page
-            }
-          } catch (profileError) {
-            console.error("Error checking user profile:", profileError);
-            // Even if profile check fails, user is logged in. Redirect to profile setup to be safe.
+        // Check if user has a complete profile
+        try {
+          const response = await db.profiles.list([
+            Query.equal('userId', user.$id)
+          ]);
+
+          if (response.documents.length > 0) {
+            // Existing user with profile - redirect to dashboard
+            console.log("User has existing profile. Redirecting to dashboard.");
+            navigate('/dashboard');
+          } else {
+            // New user or incomplete profile - redirect to profile setup
+            console.log("User is new or profile is incomplete. Redirecting to profile setup.");
             navigate('/profile-setup');
           }
-        } else {
-          // This case theoretically shouldn't happen if Appwrite redirected here on success
-          setError('Authentication failed. No user found.');
-          navigate('/auth?error=auth_failed');
+        } catch (profileError) {
+          console.error("Error checking user profile:", profileError);
+          // If profile check fails, redirect to profile setup to be safe
+          navigate('/profile-setup');
         }
-      } catch (err) {
-        console.error('Error during OAuth callback:', err);
-        setError('Authentication failed. Please try again.');
-        navigate('/auth?error=' + err.code || 'unknown_error'); // Redirect back to login with error
-      } finally {
-        setLoading(false);
+      } else {
+        // This shouldn't happen if Appwrite redirected here on success
+        setError('Authentication failed. No user found.');
+        navigate('/auth?error=auth_failed');
       }
-    };
+    } catch (err) {
+      console.error('Error during OAuth callback:', err);
+      setError('Authentication failed. Please try again.');
+      navigate('/auth?error=' + (err.code || 'unknown_error'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    handleCallback();
-  }, [navigate]);
-
+  // Loading state
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <p>Authenticating... Please wait.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Authenticating... Please wait.</p>
+        </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'red' }}>
-        <p>{error}</p>
-        <button onClick={() => navigate('/auth')}>Go back to login</button>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => navigate('/auth')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            Go back to login
+          </button>
+        </div>
       </div>
     );
   }

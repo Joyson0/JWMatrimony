@@ -1,14 +1,24 @@
-import React from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Navbar from './components/Navbar'
-import ProtectedRoute from './components/ProtectedRoute'
-import AuthRedirect from './components/AuthRedirect'
-import LoginRegister from './pages/LoginRegister'
-import Home from './pages/Home'
-import OAuthCallback from './pages/OAuthCallback'
-import ProfileSetupPage from './pages/ProfileSetupPage'
-import DashboardPage from './pages/DashboardPage'
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
+// Components
+import Navbar from './components/Navbar';
+import ProtectedRoute from './components/ProtectedRoute';
+import AuthRedirect from './components/AuthRedirect';
+
+// Pages
+import LoginRegister from './pages/LoginRegister';
+import Home from './pages/Home';
+import OAuthCallback from './pages/OAuthCallback';
+import ProfileSetupPage from './pages/ProfileSetupPage';
+import DashboardPage from './pages/DashboardPage';
+
+/**
+ * Main App Component
+ * 
+ * Defines the application routing structure with authentication protection.
+ * Routes are organized by access level: public, auth-protected, and auth-redirected.
+ */
 function App() {
   return (
     <BrowserRouter>
@@ -16,16 +26,21 @@ function App() {
         <Navbar />
         <main>
           <Routes>
-            <Route path='/' element={<Home />} />
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/auth/callback" element={<OAuthCallback />} />
+            
+            {/* Auth Route - Redirects authenticated users to dashboard */}
             <Route 
-              path='/auth' 
+              path="/auth" 
               element={
                 <AuthRedirect>
                   <LoginRegister />
                 </AuthRedirect>
               } 
             />
-            <Route path="/auth/callback" element={<OAuthCallback />} />
+            
+            {/* Protected Routes - Require authentication */}
             <Route 
               path="/profile-setup" 
               element={
@@ -46,7 +61,7 @@ function App() {
         </main>
       </div>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;

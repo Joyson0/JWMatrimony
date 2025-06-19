@@ -1,192 +1,229 @@
-// src/pages/ProfileSetupPage.jsx
 import React, { useState, useEffect } from 'react';
 import { account } from '../lib/appwrite';
-import { data, useNavigate } from 'react-router-dom';
-import { Query } from 'appwrite'; // Query is still needed for listDocuments
-import useTitle from '../hooks/useTitle'; // Your custom hook
-import { db } from '../lib/database'; // Import the db object
+import { useNavigate } from 'react-router-dom';
+import { Query } from 'appwrite';
+import useTitle from '../hooks/useTitle';
+import { db } from '../lib/database';
 
+// Wizard components
 import ProgressBar from '../components/wizard/ProgressBar';
 import Step1BasicInfo from '../components/wizard/Step1BasicInfo';
 import Step2Family from '../components/wizard/Step2Family';
 import Step3About from '../components/wizard/Step3About';
 import Step4PartnerPreferences from '../components/wizard/Step4PartnerPreferences';
 
+/**
+ * Profile Setup Page Component
+ * 
+ * Multi-step wizard for creating/editing user profiles.
+ * Handles both new profile creation and existing profile updates.
+ */
 function ProfileSetupPage() {
-  useTitle('Profile Setup Wizard - MatrimonyMatch');
+  useTitle('Profile Setup Wizard - JW Matrimony');
   const navigate = useNavigate();
 
+  // State management
   const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [userProfileDocumentId, setUserProfileDocumentId] = useState(null);
+  
+  // Form data with default structure
   const [formData, setFormData] = useState({
+    // User identification
     userId: '',
     email: '',
-    // Initialize complex objects if they don't exist
+    
+    // Basic info
+    name: '', 
+    gender: '', 
+    dateOfBirth: '', 
+    height: 0, 
+    maritalStatus: '', 
+    motherTongue: '',
+    congregation: '',
+    country: '', 
+    state: '', 
+    district: '', 
+    profilePicFileId: null,
+    
+    // About section
+    aboutMe: '', 
+    education: '', 
+    occupation: '', 
+    hobbies: [],
+    
+    // Complex nested objects
     familyDetails: {},
     partnerPreferences: {},
-    // Default values for other fields to prevent errors with React Hook Form
-    name: '', gender: '', dateOfBirth: '', height: 0, maritalStatus: '', motherTongue: '',
-    country: '', state: '', district: '', profilePicFileId: null,
-    fatherOccupation: '', motherOccupation: '', siblings: [],
-    aboutMe: '', education: '', occupation: '', hobbies: [],
-    minAge: 0, maxAge: 0, minHeight: 0, maxHeight: 0,
-    preferredMaritalStatuses: [],
   });
-  const [loading, setLoading] = useState(true);
-  const [userProfileDocumentId, setUserProfileDocumentId] = useState(null); // Appwrite document ID
-  const [submitLoading, setSubmitLoading] = useState(false);
 
-
-  // Effect to load existing profile data or initialize for a new user
+  // Load existing profile data or initialize for new user
   useEffect(() => {
-    const loadProfile = async () => {
-      setLoading(true);
-      try {
-        const currentUser = await account.get();
-        setFormData(prev => ({ ...prev, userId: currentUser.$id, email: currentUser.email }));
-
-        const response = await db.profiles.list([Query.equal('userId', currentUser.$id)]);
-
-        if (response.documents.length > 0) {
-          const existingProfile = response.documents[0];
-          setUserProfileDocumentId(existingProfile.$id);
-
-          let formattedDateOfBirth = '';
-          if (existingProfile.dateOfBirth) {
-            // Convert Appwrite's ISO string to YYYY-MM-DD for input type="date"
-            formattedDateOfBirth = new Date(existingProfile.dateOfBirth).toISOString().split('T')[0];
-          }
-
-          // Deep merge existing data into formData state
-          setFormData(prev => ({
-            ...prev,
-            ...existingProfile,
-            dateOfBirth: formattedDateOfBirth,
-            // Ensure nested JSON objects are correctly handled if they are stored as JSON strings in older Appwrite
-            familyDetails: typeof existingProfile.familyDetails === 'string'
-                ? JSON.parse(existingProfile.familyDetails) : existingProfile.familyDetails || {},
-            partnerPreferences: typeof existingProfile.partnerPreferences === 'string'
-                ? JSON.parse(existingProfile.partnerPreferences) : existingProfile.partnerPreferences || {},
-          }));
-          // console.log("Loaded existing profile:", existingProfile);
-        } else {
-          console.log("No existing profile found. Starting new setup.");
-        }
-      } catch (error) {
-        console.error('Error loading profile or user:', error);
-        alert('Could not load profile data. Please log in again.');
-        navigate('/auth'); // Redirect to login if user not found/session expired
-      } finally {
-        setLoading(false);
-      }
-    };
     loadProfile();
   }, [navigate]);
 
+  /**
+   * Load existing profile data or initialize for new user
+   */
+  const loadProfile = async () => {
+    setLoading(true);
+    try {
+      const currentUser = await account.get();
+      setFormData(prev => ({ 
+        ...prev, 
+        userId: currentUser.$id, 
+        email: currentUser.email 
+      }));
+
+      // Check for existing profile
+      const response = await db.profiles.list([
+        Query.equal('userId', currentUser.$id)
+      ]);
+
+      if (response.documents.length > 0) {
+        const existingProfile = response.documents[0];
+        setUserProfileDocumentId(existingProfile.$id);
+
+        // Format date for HTML input
+        let formattedDateOfBirth = '';
+        if (existingProfile.dateOfBirth) {
+          formattedDateOfBirth = new Date(existingProfile.dateOfBirth).toISOString().split('T')[0];
+        }
+
+        // Merge existing data with form structure
+        setFormData(prev => ({
+          ...prev,
+          ...existingProfile,
+          dateOfBirth: formattedDateOfBirth,
+          // Handle nested JSON objects (parse if stored as strings)
+          familyDetails: typeof existingProfile.familyDetails === 'string'
+            ? JSON.parse(existingProfile.familyDetails) 
+            : existingProfile.familyDetails || {},
+          partnerPreferences: typeof existingProfile.partnerPreferences === 'string'
+            ? JSON.parse(existingProfile.partnerPreferences) 
+            : existingProfile.partnerPreferences || {},
+        }));
+        
+        console.log("Loaded existing profile:", existingProfile);
+      } else {
+        console.log("No existing profile found. Starting new setup.");
+      }
+    } catch (error) {
+      console.error('Error loading profile or user:', error);
+      alert('Could not load profile data. Please log in again.');
+      navigate('/auth');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Navigation handlers
+   */
   const handleNext = () => {
-    console.log("ProfileSetupPage: Moving to next step. Current:", currentStep, "Next:", currentStep + 1);
-    setCurrentStep(prev => Math.min(prev + 1, 4)); // Max 4 steps
+    setCurrentStep(prev => Math.min(prev + 1, 4));
   };
 
   const handleBack = () => {
-    console.log("ProfileSetupPage: Moving to previous step. Current:", currentStep, "Back:", currentStep - 1);
-    setCurrentStep(prev => Math.max(prev - 1, 1)); // Min 1 step
+    setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
+  /**
+   * Update form data from child components
+   * Handles both flat fields and nested objects
+   * 
+   * @param {Object} newData - New data from step components
+   */
   const updateFormData = (newData) => {
     setFormData(prev => {
       console.log("--- ProfileSetupPage updateFormData ---");
-        console.log("ProfileSetupPage updateFormData: 'prev' state (before merge):", prev);
-        console.log("ProfileSetupPage updateFormData: 'newData' received from child:", newData);
-      // 1. Start by shallow-merging all top-level properties from newData into prev.
-      // This correctly updates fields like name, gender, education, etc.
+      console.log("Previous state:", prev);
+      console.log("New data from child:", newData);
+      
+      // Shallow merge all top-level properties
       let updatedData = { ...prev, ...newData };
 
-      // 2. Explicitly handle deep merging for nested JSON objects if they are present in newData.
-      // We check for truthiness of newData.familyDetails (meaning it's an object from the child component).
+      // Deep merge nested objects if present
       if (newData.familyDetails) {
-          updatedData.familyDetails = { ...prev.familyDetails, ...newData.familyDetails };
-          console.log("ProfileSetupPage updateFormData: familyDetails MERGED.");
+        updatedData.familyDetails = { ...prev.familyDetails, ...newData.familyDetails };
+        console.log("familyDetails merged");
       }
+      
       if (newData.partnerPreferences) {
-          updatedData.partnerPreferences = { ...prev.partnerPreferences, ...newData.partnerPreferences };
-          console.log("ProfileSetupPage updateFormData: partnerPreferences MERGED.");
-      } else {
-        console.log("ProfileSetupPage updateFormData: newData.partnerPreferences was NOT present or truthy.");
+        updatedData.partnerPreferences = { ...prev.partnerPreferences, ...newData.partnerPreferences };
+        console.log("partnerPreferences merged");
       }
-      // console.log("Updated data:", updatedData); // Debug
-      console.log("ProfileSetupPage updateFormData: 'updatedData' (resulting formData) AFTER merge logic:", updatedData)
+      
+      console.log("Updated form data:", updatedData);
       return updatedData;
     });
   };
 
+  /**
+   * Handle final form submission
+   * Saves complete profile data to database
+   * 
+   * @param {Object} finalStepData - Data from the final step
+   */
   const handleSubmitFinal = async (finalStepData) => {
     setSubmitLoading(true);
-    console.log("finalSepData:", finalStepData)
-      console.log("formData:", formData)
+    console.log("Final step data:", finalStepData);
+    console.log("Current form data:", formData);
+    
     try {
-      
-      const completeFormDataForSave = {
-        
-        ...formData, // This brings in all data from previous steps
-        ...finalStepData, // This overlays the latest data from Step 4
-        // Ensure nested objects are fully represented from finalStepData
-        // familyDetails: { ...(formData.familyDetails || {}), ...(finalStepData.familyDetails || {}) },
-        partnerPreferences: { ...(formData.partnerPreferences || {}), ...(finalStepData.partnerPreferences || {}) },
+      // Combine all form data
+      const completeFormData = {
+        ...formData,
+        ...finalStepData,
+        // Ensure nested objects are properly merged
+        partnerPreferences: { 
+          ...(formData.partnerPreferences || {}), 
+          ...(finalStepData.partnerPreferences || {}) 
+        },
       };
 
-      // Prepare data for Appwrite. Ensure JSON fields are objects.
+      // Prepare data for Appwrite (stringify JSON objects)
       const dataToSave = {
-        userId: completeFormDataForSave.userId,
-        email: completeFormDataForSave.email,
-        name: completeFormDataForSave.name,
-        gender: completeFormDataForSave.gender,
-        dateOfBirth: completeFormDataForSave.dateOfBirth, // Appwrite will handle ISO string from Date object
-        height: completeFormDataForSave.height,
-        maritalStatus: completeFormDataForSave.maritalStatus,
-        congregation: completeFormDataForSave.congregation,
-        motherTongue: completeFormDataForSave.motherTongue,
-        country: completeFormDataForSave.country,
-        state: completeFormDataForSave.state,
-        district: completeFormDataForSave.district,
-        profilePicFileId: completeFormDataForSave.profilePicFileId,
-        aboutMe: completeFormDataForSave.aboutMe,
-        education: completeFormDataForSave.education,
-        occupation: completeFormDataForSave.occupation,
-        hobbies: completeFormDataForSave.hobbies, // Array of strings is fine
-
-        // These should be stringifyed JSON objects for Appwrite's string type
-        familyDetails: JSON.stringify(completeFormDataForSave.familyDetails),
-        partnerPreferences: JSON.stringify(completeFormDataForSave.partnerPreferences),
-
-        // Add other fields from the schema as needed
-        // isVerified: false, // Default to false, admin verifies later
-        // lastOnline: new Date().toISOString(), // Current timestamp
+        userId: completeFormData.userId,
+        email: completeFormData.email,
+        name: completeFormData.name,
+        gender: completeFormData.gender,
+        dateOfBirth: completeFormData.dateOfBirth,
+        height: completeFormData.height,
+        maritalStatus: completeFormData.maritalStatus,
+        congregation: completeFormData.congregation,
+        motherTongue: completeFormData.motherTongue,
+        country: completeFormData.country,
+        state: completeFormData.state,
+        district: completeFormData.district,
+        profilePicFileId: completeFormData.profilePicFileId,
+        aboutMe: completeFormData.aboutMe,
+        education: completeFormData.education,
+        occupation: completeFormData.occupation,
+        hobbies: completeFormData.hobbies,
+        // Stringify nested objects for Appwrite storage
+        familyDetails: JSON.stringify(completeFormData.familyDetails),
+        partnerPreferences: JSON.stringify(completeFormData.partnerPreferences),
       };
 
-      console.log("--- ProfileSetupPage handleSubmitFinal ---");
-      console.log("dataToSave: ", dataToSave)
+      console.log("Data to save:", dataToSave);
 
+      // Save to database (create or update)
       let response;
       if (userProfileDocumentId) {
-        // Update existing profile document
-        response = await db.profiles.update(
-          userProfileDocumentId,
-          dataToSave,
-        );
+        response = await db.profiles.update(userProfileDocumentId, dataToSave);
         console.log('Profile updated successfully:', response);
       } else {
-        // Create new profile document
-        // ID.unique() is handled by default in db.profiles.create
         response = await db.profiles.create(dataToSave);
         console.log('Profile created successfully:', response);
-        // Optionally, you might want to set userProfileDocumentId from response.$id here if needed for immediate further actions
       }
 
-      // Dispatch custom event to notify navbar of profile update
+      // Notify navbar of profile update
       window.dispatchEvent(new CustomEvent('profileUpdated'));
       
       alert('Profile setup complete!');
-      navigate('/dashboard'); // Redirect to dashboard or home page
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error saving profile:', error);
       alert('Failed to save profile. Please try again.');
@@ -195,59 +232,32 @@ function ProfileSetupPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <p>Loading Profile Data...</p>
-      </div>
-    );
-  }
-
+  /**
+   * Render the appropriate step component
+   */
   const renderStep = () => {
-    const totalSteps = 4; // Define total steps here
+    const totalSteps = 4;
+    const stepProps = {
+      formData,
+      updateFormData,
+      currentStep,
+      totalSteps,
+      onNext: handleNext,
+      onBack: handleBack,
+    };
+
     switch (currentStep) {
       case 1:
-        return (
-          <Step1BasicInfo
-            formData={formData}
-            updateFormData={updateFormData}
-            onNext={handleNext}
-            currentStep={currentStep} // Pass currentStep
-            totalSteps={totalSteps}   // Pass totalSteps
-            onBack={handleBack}       // Add onBack here for consistency, though it won't be active on Step 1
-          />
-        );
+        return <Step1BasicInfo {...stepProps} />;
       case 2:
-        return (
-          <Step2Family
-            formData={formData}
-            updateFormData={updateFormData}
-            onNext={handleNext}
-            onBack={handleBack}
-            currentStep={currentStep} // Pass currentStep
-            totalSteps={totalSteps}   // Pass totalSteps
-          />
-        );
+        return <Step2Family {...stepProps} />;
       case 3:
-        return (
-          <Step3About
-            formData={formData}
-            updateFormData={updateFormData}
-            onNext={handleNext}
-            onBack={handleBack}
-            currentStep={currentStep} // Pass currentStep
-            totalSteps={totalSteps}   // Pass totalSteps
-          />
-        );
+        return <Step3About {...stepProps} />;
       case 4:
         return (
           <Step4PartnerPreferences
-            formData={formData}
-            updateFormData={updateFormData}
-            onBack={handleBack}
-            onSubmit={(step4Data) => handleSubmitFinal(step4Data)} // Final submission on this step
-            currentStep={currentStep} // Pass currentStep
-            totalSteps={totalSteps}   // Pass totalSteps
+            {...stepProps}
+            onSubmit={handleSubmitFinal}
           />
         );
       default:
@@ -255,10 +265,24 @@ function ProfileSetupPage() {
     }
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading Profile Data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ padding: '20px' }}>
-      <ProgressBar currentStep={currentStep} totalSteps={4} />
-      {renderStep()}
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <ProgressBar currentStep={currentStep} totalSteps={4} />
+        {renderStep()}
+      </div>
     </div>
   );
 }

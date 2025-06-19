@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { account } from '../lib/appwrite';
 
+/**
+ * ProtectedRoute Component
+ * 
+ * Protects routes that require authentication.
+ * Redirects unauthenticated users to the auth page with return URL.
+ * 
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components to render if authenticated
+ */
 const ProtectedRoute = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,6 +20,9 @@ const ProtectedRoute = ({ children }) => {
     checkAuth();
   }, []);
 
+  /**
+   * Check if user is authenticated
+   */
   const checkAuth = async () => {
     try {
       const currentUser = await account.get();
@@ -23,6 +35,7 @@ const ProtectedRoute = ({ children }) => {
     }
   };
 
+  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -34,11 +47,12 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
+  // Redirect to auth page if not authenticated, preserving the intended destination
   if (!user) {
-    // Redirect to auth page with return URL
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
+  // Render protected content if authenticated
   return children;
 };
 

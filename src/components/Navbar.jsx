@@ -4,19 +4,22 @@ import { account, storage } from '../lib/appwrite';
 import { FiUser, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
 
 const Navbar = () => {
+  // State management
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Check authentication status on component mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
-  // Listen for profile updates from localStorage or custom events
+  // Listen for profile updates and location changes
   useEffect(() => {
     const handleProfileUpdate = () => {
       if (user) {
@@ -27,7 +30,7 @@ const Navbar = () => {
     // Listen for custom profile update events
     window.addEventListener('profileUpdated', handleProfileUpdate);
     
-    // Also check for updates when location changes (user navigates)
+    // Check for updates when location changes (user navigates)
     if (user) {
       fetchUserProfile(user.$id);
     }
@@ -37,6 +40,9 @@ const Navbar = () => {
     };
   }, [user, location.pathname]);
 
+  /**
+   * Check if user is authenticated and fetch their data
+   */
   const checkAuthStatus = async () => {
     try {
       const currentUser = await account.get();
@@ -51,6 +57,10 @@ const Navbar = () => {
     }
   };
 
+  /**
+   * Fetch user profile from database
+   * @param {string} userId - The user's ID
+   */
   const fetchUserProfile = async (userId) => {
     try {
       const { db } = await import('../lib/database');
@@ -59,17 +69,16 @@ const Navbar = () => {
         Query.equal('userId', userId)
       ]);
       
-      if (profileResponse.documents.length > 0) {
-        setUserProfile(profileResponse.documents[0]);
-      } else {
-        setUserProfile(null);
-      }
+      setUserProfile(profileResponse.documents.length > 0 ? profileResponse.documents[0] : null);
     } catch (profileError) {
       console.log('No profile found or error fetching profile:', profileError);
       setUserProfile(null);
     }
   };
 
+  /**
+   * Handle user logout
+   */
   const handleLogout = async () => {
     try {
       await account.deleteSession('current');
@@ -82,6 +91,10 @@ const Navbar = () => {
     }
   };
 
+  /**
+   * Get profile image URL from storage
+   * @returns {string|null} Profile image URL or null
+   */
   const getProfileImageUrl = () => {
     if (userProfile?.profilePicFileId) {
       try {
@@ -95,6 +108,9 @@ const Navbar = () => {
     return null;
   };
 
+  /**
+   * Profile image component with fallback to initials
+   */
   const ProfileImage = () => {
     const imageUrl = getProfileImageUrl();
     
@@ -112,15 +128,24 @@ const Navbar = () => {
       );
     }
     
+    // Fallback to user initials
+    const displayName = userProfile?.name || user?.name || user?.email || 'User';
+    const initial = displayName.charAt(0).toUpperCase();
+    
     return (
       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-        {userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : 
-         user?.name ? user.name.charAt(0).toUpperCase() : 
-         user?.email?.charAt(0).toUpperCase() || 'U'}
+        {initial}
       </div>
     );
   };
 
+  /**
+   * Close mobile menu and dropdown
+   */
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+  const closeDropdown = () => setDropdownOpen(false);
+
+  // Loading state
   if (loading) {
     return (
       <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -140,6 +165,8 @@ const Navbar = () => {
     );
   }
 
+  const displayName = userProfile?.name || user?.name || 'Profile';
+
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -155,6 +182,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-6">
             {user ? (
               <>
+                {/* Dashboard Link */}
                 <Link
                   to="/dashboard"
                   className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
@@ -169,17 +197,16 @@ const Navbar = () => {
                     className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full p-1 transition-colors"
                   >
                     <ProfileImage />
-                    <span className="text-sm font-medium">
-                      {userProfile?.name || user.name || 'Profile'}
-                    </span>
+                    <span className="text-sm font-medium">{displayName}</span>
                   </button>
 
+                  {/* Dropdown Menu */}
                   {dropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                       <Link
                         to="/profile-setup"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setDropdownOpen(false)}
+                        onClick={closeDropdown}
                       >
                         <FiUser className="mr-3 h-4 w-4" />
                         Edit Profile
@@ -196,6 +223,7 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
+              /* Sign In Button for non-authenticated users */
               <Link
                 to="/auth"
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
@@ -211,11 +239,7 @@ const Navbar = () => {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="text-gray-700 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md p-2"
             >
-              {mobileMenuOpen ? (
-                <FiX className="h-6 w-6" />
-              ) : (
-                <FiMenu className="h-6 w-6" />
-              )}
+              {mobileMenuOpen ? <FiX className="h-6 w-6" /> : <FiMenu className="h-6 w-6" />}
             </button>
           </div>
         </div>
@@ -225,30 +249,31 @@ const Navbar = () => {
           <div className="md:hidden border-t border-gray-200 py-4">
             {user ? (
               <div className="space-y-2">
+                {/* User Info */}
                 <div className="flex items-center space-x-3 px-3 py-2">
                   <ProfileImage />
-                  <span className="text-sm font-medium text-gray-900">
-                    {userProfile?.name || user.name || 'Profile'}
-                  </span>
+                  <span className="text-sm font-medium text-gray-900">{displayName}</span>
                 </div>
+                
+                {/* Navigation Links */}
                 <Link
                   to="/dashboard"
                   className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={closeMobileMenu}
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/profile-setup"
                   className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={closeMobileMenu}
                 >
                   Edit Profile
                 </Link>
                 <button
                   onClick={() => {
                     handleLogout();
-                    setMobileMenuOpen(false);
+                    closeMobileMenu();
                   }}
                   className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
                 >
@@ -256,10 +281,11 @@ const Navbar = () => {
                 </button>
               </div>
             ) : (
+              /* Mobile Sign In Button */
               <Link
                 to="/auth"
                 className="block mx-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-center"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={closeMobileMenu}
               >
                 Sign In / Sign Up
               </Link>
@@ -268,11 +294,11 @@ const Navbar = () => {
         )}
       </div>
 
-      {/* Backdrop for dropdown */}
+      {/* Backdrop for dropdown - closes dropdown when clicked */}
       {dropdownOpen && (
         <div
           className="fixed inset-0 z-40"
-          onClick={() => setDropdownOpen(false)}
+          onClick={closeDropdown}
         />
       )}
     </nav>
