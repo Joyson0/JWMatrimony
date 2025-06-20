@@ -9,6 +9,23 @@ import { FiUpload, FiUser, FiCalendar, FiMapPin } from 'react-icons/fi';
 
 const ProfilePicBucketId = import.meta.env.VITE_BUCKET_ID;
 
+// Helper to convert YYYY-MM-DD from input to an ISO UTC string (midnight UTC)
+const formatInputDateToISOUTC = (dateObj) => {
+  if (!dateObj) return null;
+  try {
+    // Extract the year, month, and day
+    const year = dateObj.getFullYear();
+    // getMonth() returns month from 0-11, so add 1
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    // getDate() returns day of the month
+    const day = dateObj.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    console.error("Error converting input date to ISO UTC:", e);
+    return null;
+  }
+};
+
 /**
  * Step 1: Basic Information Form
  * Modern, card-based design with icons and smooth animations
@@ -16,7 +33,9 @@ const ProfilePicBucketId = import.meta.env.VITE_BUCKET_ID;
 function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSteps }) {
   const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = useForm({
     resolver: yupResolver(basicInfoSchema),
-    defaultValues: formData,
+    defaultValues: {
+      ...formData
+    },
   });
 
   const profilePicFileId = watch('profilePicFileId');
@@ -24,6 +43,14 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
   const [countries, setCountries] = useState([]);
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
+
+  useEffect(() => {
+    // When formData prop updates (e.g., after async load from parent),
+    // reset the form with new default values, formatting dateOfBirth for the input.
+    reset({
+      ...formData,
+    });
+  }, [formData, reset]);
 
   useEffect(() => {
     // Initialize location data
@@ -66,8 +93,13 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     }
   };
 
-  const onSubmit = (data) => {
-    updateFormData(data);
+  const onSubmit = (dataFromForm) => {
+    // dataFromForm.dateOfBirth is YYYY-MM-DD from the input
+    const dataToUpdate = {
+      ...dataFromForm,
+      dateOfBirth: formatInputDateToISOUTC(dataFromForm.dateOfBirth), // Convert to ISO UTC string
+    };
+    updateFormData(dataToUpdate);
     onNext();
   };
 

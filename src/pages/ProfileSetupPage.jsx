@@ -147,15 +147,15 @@ function ProfileSetupPage() {
       // Deep merge nested objects if present
       if (newData.familyDetails) {
         updatedData.familyDetails = { ...prev.familyDetails, ...newData.familyDetails };
-        console.log("familyDetails merged");
+        // console.log("familyDetails merged");
       }
       
       if (newData.partnerPreferences) {
         updatedData.partnerPreferences = { ...prev.partnerPreferences, ...newData.partnerPreferences };
-        console.log("partnerPreferences merged");
+        // console.log("partnerPreferences merged");
       }
       
-      console.log("Updated form data:", updatedData);
+      // console.log("Updated form data:", updatedData);
       return updatedData;
     });
   };
@@ -168,7 +168,7 @@ function ProfileSetupPage() {
    */
   const handleSubmitFinal = async (finalStepData) => {
     setSubmitLoading(true);
-    console.log("Final step data:", finalStepData);
+    // console.log("Final step data:", finalStepData);
     console.log("Current form data:", formData);
     
     try {
@@ -207,7 +207,7 @@ function ProfileSetupPage() {
         partnerPreferences: JSON.stringify(completeFormData.partnerPreferences),
       };
 
-      console.log("Data to save:", dataToSave);
+      // console.log("Data to save:", dataToSave);
 
       // Save to database (create or update)
       let response;
@@ -216,7 +216,7 @@ function ProfileSetupPage() {
         console.log('Profile updated successfully:', response);
       } else {
         response = await db.profiles.create(dataToSave);
-        console.log('Profile created successfully:', response);
+        // console.log('Profile created successfully:', response);
       }
 
       // Notify navbar of profile update
