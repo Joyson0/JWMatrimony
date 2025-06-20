@@ -41,6 +41,18 @@ export const basicInfoSchema = yup.object().shape({
   state: yup.string().optional(),
   district: yup.string().optional(),
   profilePicFileId: yup.string().nullable().optional(), // Will be set after upload
+  // Hidden validation fields for location validation
+  countryValid: yup.boolean().oneOf([true], 'Please select a valid country from the dropdown'),
+  stateValid: yup.boolean().when('state', {
+    is: (state) => state && state.length > 0,
+    then: (schema) => schema.oneOf([true], 'Please select a valid state from the dropdown'),
+    otherwise: (schema) => schema.optional()
+  }),
+  districtValid: yup.boolean().when('district', {
+    is: (district) => district && district.length > 0,
+    then: (schema) => schema.oneOf([true], 'Please select a valid city from the dropdown'),
+    otherwise: (schema) => schema.optional()
+  }),
 });
 
 export const familySchema = yup.object().shape({

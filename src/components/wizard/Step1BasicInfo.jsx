@@ -5,7 +5,7 @@ import { basicInfoSchema } from './ValidationSchemas';
 import { storage } from '../../lib/appwrite';
 import { ID } from 'appwrite';
 import WizardNavigation from './WizardNavigation';
-import { FiUpload, FiUser, FiCalendar, FiMapPin, FiChevronDown } from 'react-icons/fi';
+import { FiUpload, FiUser, FiCalendar, FiMapPin, FiChevronDown, FiAlertCircle } from 'react-icons/fi';
 import { GetCountries, GetState, GetCity } from 'react-country-state-city';
 
 const ProfilePicBucketId = import.meta.env.VITE_BUCKET_ID;
@@ -28,9 +28,10 @@ const formatInputDateToISOUTC = (dateObj) => {
 };
 
 /**
- * AutoSuggest Component for location fields
+ * Strict AutoSuggest Component for location fields
+ * Only allows selection from dropdown, prevents custom input
  */
-const AutoSuggestField = ({ 
+const StrictAutoSuggestField = ({ 
   label, 
   options, 
   value, 
@@ -38,11 +39,13 @@ const AutoSuggestField = ({
   placeholder, 
   disabled, 
   error,
-  icon: Icon 
+  icon: Icon,
+  validationError
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredOptions, setFilteredOptions] = useState([]);
+  const [isValidSelection, setIsValidSelection] = useState(false);
 
   useEffect(() => {
     if (searchTerm) {
@@ -61,27 +64,67 @@ const AutoSuggestField = ({
       const selectedOption = options.find(option => option.id === value || option.name === value);
       if (selectedOption) {
         setSearchTerm(selectedOption.name);
+        setIsValidSelection(true);
+      } else {
+        setIsValidSelection(false);
       }
     } else {
       setSearchTerm('');
+      setIsValidSelection(false);
     }
   }, [value, options]);
 
   const handleSelect = (option) => {
     setSearchTerm(option.name);
+    setIsValidSelection(true);
     onChange(option);
     setIsOpen(false);
   };
 
   const handleInputChange = (e) => {
-    setSearchTerm(e.target.value);
+    const inputValue = e.target.value;
+    setSearchTerm(inputValue);
     setIsOpen(true);
     
-    // If input is cleared, clear the selection
-    if (!e.target.value) {
-      onChange(null);
+    // Check if the input matches any option exactly
+    const exactMatch = options.find(option => 
+      option.name.toLowerCase() === inputValue.toLowerCase()
+    );
+    
+    if (exactMatch) {
+      setIsValidSelection(true);
+      onChange(exactMatch);
+    } else {
+      setIsValidSelection(false);
+      // If input doesn't match any option, clear the selection
+      if (inputValue === '') {
+        onChange(null);
+      }
     }
   };
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      setIsOpen(false);
+      
+      // If the input doesn't match any valid option, show warning and clear
+      if (searchTerm && !isValidSelection) {
+        const exactMatch = options.find(option => 
+          option.name.toLowerCase() === searchTerm.toLowerCase()
+        );
+        
+        if (!exactMatch) {
+          // Clear invalid input after a short delay
+          setTimeout(() => {
+            setSearchTerm('');
+            onChange(null);
+          }, 100);
+        }
+      }
+    }, 200);
+  };
+
+  const hasValidationError = !isValidSelection && searchTerm && searchTerm.length > 0;
 
   return (
     <div className="relative">
@@ -95,18 +138,37 @@ const AutoSuggestField = ({
           value={searchTerm}
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+          onBlur={handleBlur}
           disabled={disabled}
-          className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+          className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 transition-all duration-200 ${
             disabled 
               ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
-              : 'border-gray-300 bg-white'
+              : hasValidationError
+                ? 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                : isValidSelection && searchTerm
+                  ? 'border-green-300 focus:ring-green-500 focus:border-green-500 bg-green-50'
+                  : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 bg-white'
           }`}
           placeholder={disabled ? 'Select previous field first' : placeholder}
+          autoComplete="off"
         />
-        <FiChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-transform duration-200 ${
-          isOpen ? 'rotate-180' : ''
-        } ${disabled ? 'text-gray-400' : 'text-gray-500'}`} />
+        
+        {/* Status Icons */}
+        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+          {hasValidationError && (
+            <FiAlertCircle className="w-4 h-4 text-red-500" />
+          )}
+          {isValidSelection && searchTerm && (
+            <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+              <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+          )}
+          <FiChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+            isOpen ? 'rotate-180' : ''
+          } ${disabled ? 'text-gray-400' : 'text-gray-500'}`} />
+        </div>
         
         {/* Dropdown */}
         {isOpen && !disabled && filteredOptions.length > 0 && (
@@ -128,16 +190,33 @@ const AutoSuggestField = ({
         {isOpen && !disabled && searchTerm && filteredOptions.length === 0 && (
           <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
             <div className="px-4 py-3 text-gray-500 text-center">
-              No results found
+              <FiAlertCircle className="w-5 h-5 mx-auto mb-2 text-red-500" />
+              <p className="text-sm">No results found</p>
+              <p className="text-xs text-red-600 mt-1">Please select from available options only</p>
             </div>
           </div>
         )}
       </div>
       
+      {/* Validation Error Messages */}
+      {hasValidationError && (
+        <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+          <FiAlertCircle className="w-4 h-4" />
+          Please select a valid option from the dropdown
+        </p>
+      )}
+      
       {error && (
         <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
           <span className="w-4 h-4">⚠️</span>
           {error.message}
+        </p>
+      )}
+      
+      {validationError && (
+        <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+          <FiAlertCircle className="w-4 h-4" />
+          {validationError.message}
         </p>
       )}
     </div>
@@ -149,7 +228,7 @@ const AutoSuggestField = ({
  * Modern, card-based design with icons and smooth animations
  */
 function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSteps }) {
-  const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = useForm({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, reset, trigger } = useForm({
     resolver: yupResolver(basicInfoSchema),
     defaultValues: {
       ...formData
@@ -196,6 +275,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         const country = countries.find(c => c.name === formData.country);
         if (country) {
           setSelectedCountry(country);
+          setValue('countryValid', true);
           
           // Load states for the selected country
           try {
@@ -207,6 +287,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
               const state = statesData.find(s => s.name === formData.state);
               if (state) {
                 setSelectedState(state);
+                setValue('stateValid', true);
                 
                 // Load cities for the selected state
                 try {
@@ -218,6 +299,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                     const city = citiesData.find(c => c.name === formData.district);
                     if (city) {
                       setSelectedCity(city);
+                      setValue('districtValid', true);
                     }
                   }
                 } catch (error) {
@@ -233,7 +315,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     };
 
     initializeLocationData();
-  }, [formData.country, formData.state, formData.district, countries]);
+  }, [formData.country, formData.state, formData.district, countries, setValue]);
 
   const handleFileChange = async (event) => {
     if (event.target.files && event.target.files[0]) {
@@ -268,6 +350,9 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     setValue('country', country ? country.name : '');
     setValue('state', '');
     setValue('district', '');
+    setValue('countryValid', !!country);
+    setValue('stateValid', true); // Reset state validation
+    setValue('districtValid', true); // Reset district validation
     
     if (country) {
       try {
@@ -277,6 +362,9 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         console.error('Error loading states:', error);
       }
     }
+    
+    // Trigger validation
+    trigger(['countryValid', 'stateValid', 'districtValid']);
   };
 
   const handleStateChange = async (state) => {
@@ -286,6 +374,8 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     
     setValue('state', state ? state.name : '');
     setValue('district', '');
+    setValue('stateValid', !!state);
+    setValue('districtValid', true); // Reset district validation
     
     if (state && selectedCountry) {
       try {
@@ -295,18 +385,28 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         console.error('Error loading cities:', error);
       }
     }
+    
+    // Trigger validation
+    trigger(['stateValid', 'districtValid']);
   };
 
   const handleCityChange = (city) => {
     setSelectedCity(city);
     setValue('district', city ? city.name : '');
+    setValue('districtValid', !!city);
+    
+    // Trigger validation
+    trigger('districtValid');
   };
 
   const onSubmit = (dataFromForm) => {
+    // Remove validation helper fields before submitting
+    const { countryValid, stateValid, districtValid, ...cleanData } = dataFromForm;
+    
     // dataFromForm.dateOfBirth is YYYY-MM-DD from the input
     const dataToUpdate = {
-      ...dataFromForm,
-      dateOfBirth: formatInputDateToISOUTC(dataFromForm.dateOfBirth), // Convert to ISO UTC string
+      ...cleanData,
+      dateOfBirth: formatInputDateToISOUTC(cleanData.dateOfBirth), // Convert to ISO UTC string
     };
     updateFormData(dataToUpdate);
     onNext();
@@ -325,6 +425,11 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-8">
+          {/* Hidden validation fields */}
+          <input type="hidden" {...register('countryValid')} />
+          <input type="hidden" {...register('stateValid')} />
+          <input type="hidden" {...register('districtValid')} />
+
           {/* Profile Picture Section */}
           <div className="mb-8 text-center">
             <div className="relative inline-block">
@@ -507,9 +612,24 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                 <FiMapPin className="w-5 h-5" />
                 Location Details
               </h3>
+              
+              {/* Important Notice */}
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <FiAlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-blue-900 mb-1">Location Selection Guidelines</h4>
+                    <p className="text-sm text-blue-700">
+                      Please type to search and select from the dropdown options only. 
+                      Custom entries are not allowed to ensure data consistency.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Country */}
-                <AutoSuggestField
+                <StrictAutoSuggestField
                   label="Country *"
                   options={countries}
                   value={selectedCountry?.name || ''}
@@ -517,11 +637,12 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                   placeholder="Search and select country"
                   disabled={false}
                   error={errors.country}
+                  validationError={errors.countryValid}
                   icon={FiMapPin}
                 />
 
                 {/* State */}
-                <AutoSuggestField
+                <StrictAutoSuggestField
                   label="State"
                   options={states}
                   value={selectedState?.name || ''}
@@ -529,10 +650,11 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                   placeholder="Search and select state"
                   disabled={!selectedCountry}
                   error={errors.state}
+                  validationError={errors.stateValid}
                 />
 
                 {/* District/City */}
-                <AutoSuggestField
+                <StrictAutoSuggestField
                   label="District/City"
                   options={cities}
                   value={selectedCity?.name || ''}
@@ -540,6 +662,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                   placeholder="Search and select city"
                   disabled={!selectedState}
                   error={errors.district}
+                  validationError={errors.districtValid}
                 />
               </div>
             </div>
