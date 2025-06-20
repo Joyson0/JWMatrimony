@@ -5,7 +5,8 @@ import { basicInfoSchema } from './ValidationSchemas';
 import { storage } from '../../lib/appwrite';
 import { ID } from 'appwrite';
 import WizardNavigation from './WizardNavigation';
-import { FiUpload, FiUser, FiCalendar, FiMapPin } from 'react-icons/fi';
+import { FiUpload, FiUser, FiCalendar, FiMapPin, FiChevronDown } from 'react-icons/fi';
+import { GetCountries, GetState, GetCity } from 'react-country-state-city';
 
 const ProfilePicBucketId = import.meta.env.VITE_BUCKET_ID;
 
@@ -27,6 +28,123 @@ const formatInputDateToISOUTC = (dateObj) => {
 };
 
 /**
+ * AutoSuggest Component for location fields
+ */
+const AutoSuggestField = ({ 
+  label, 
+  options, 
+  value, 
+  onChange, 
+  placeholder, 
+  disabled, 
+  error,
+  icon: Icon 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredOptions, setFilteredOptions] = useState([]);
+
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = options.filter(option =>
+        option.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredOptions(filtered);
+    } else {
+      setFilteredOptions(options);
+    }
+  }, [searchTerm, options]);
+
+  useEffect(() => {
+    // Set display value when value prop changes
+    if (value) {
+      const selectedOption = options.find(option => option.id === value || option.name === value);
+      if (selectedOption) {
+        setSearchTerm(selectedOption.name);
+      }
+    } else {
+      setSearchTerm('');
+    }
+  }, [value, options]);
+
+  const handleSelect = (option) => {
+    setSearchTerm(option.name);
+    onChange(option);
+    setIsOpen(false);
+  };
+
+  const handleInputChange = (e) => {
+    setSearchTerm(e.target.value);
+    setIsOpen(true);
+    
+    // If input is cleared, clear the selection
+    if (!e.target.value) {
+      onChange(null);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+        {Icon && <Icon className="w-4 h-4" />}
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={handleInputChange}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+          disabled={disabled}
+          className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+            disabled 
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
+              : 'border-gray-300 bg-white'
+          }`}
+          placeholder={disabled ? 'Select previous field first' : placeholder}
+        />
+        <FiChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-transform duration-200 ${
+          isOpen ? 'rotate-180' : ''
+        } ${disabled ? 'text-gray-400' : 'text-gray-500'}`} />
+        
+        {/* Dropdown */}
+        {isOpen && !disabled && filteredOptions.length > 0 && (
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            {filteredOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => handleSelect(option)}
+                className="w-full px-4 py-3 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none transition-colors duration-150 border-b border-gray-100 last:border-b-0"
+              >
+                <span className="text-gray-900">{option.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        
+        {/* No results */}
+        {isOpen && !disabled && searchTerm && filteredOptions.length === 0 && (
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+            <div className="px-4 py-3 text-gray-500 text-center">
+              No results found
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {error && (
+        <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+          <span className="w-4 h-4">⚠️</span>
+          {error.message}
+        </p>
+      )}
+    </div>
+  );
+};
+
+/**
  * Step 1: Basic Information Form
  * Modern, card-based design with icons and smooth animations
  */
@@ -40,9 +158,14 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
 
   const profilePicFileId = watch('profilePicFileId');
   const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Location state management
   const [countries, setCountries] = useState([]);
   const [states, setStates] = useState([]);
-  const [districts, setDistricts] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [selectedState, setSelectedState] = useState(null);
+  const [selectedCity, setSelectedCity] = useState(null);
 
   useEffect(() => {
     // When formData prop updates (e.g., after async load from parent),
@@ -52,23 +175,65 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     });
   }, [formData, reset]);
 
+  // Initialize countries on component mount
   useEffect(() => {
-    // Initialize location data
-    const dummyLocations = {
-      India: {
-        Maharashtra: ['Mumbai', 'Pune', 'Nagpur'],
-        Delhi: ['New Delhi'],
-      },
-    };
-    setCountries(Object.keys(dummyLocations));
-    
-    if (formData.country && dummyLocations[formData.country]) {
-      setStates(Object.keys(dummyLocations[formData.country]));
-      if (formData.state && dummyLocations[formData.country][formData.state]) {
-        setDistricts(dummyLocations[formData.country][formData.state]);
+    const loadCountries = async () => {
+      try {
+        const countriesData = await GetCountries();
+        setCountries(countriesData);
+      } catch (error) {
+        console.error('Error loading countries:', error);
       }
-    }
-  }, [formData.country, formData.state]);
+    };
+    loadCountries();
+  }, []);
+
+  // Initialize location selections based on formData
+  useEffect(() => {
+    const initializeLocationData = async () => {
+      if (formData.country && countries.length > 0) {
+        // Find and set selected country
+        const country = countries.find(c => c.name === formData.country);
+        if (country) {
+          setSelectedCountry(country);
+          
+          // Load states for the selected country
+          try {
+            const statesData = await GetState(country.id);
+            setStates(statesData);
+            
+            // If state is also selected, find and set it
+            if (formData.state) {
+              const state = statesData.find(s => s.name === formData.state);
+              if (state) {
+                setSelectedState(state);
+                
+                // Load cities for the selected state
+                try {
+                  const citiesData = await GetCity(country.id, state.id);
+                  setCities(citiesData);
+                  
+                  // If city is also selected, find and set it
+                  if (formData.district) {
+                    const city = citiesData.find(c => c.name === formData.district);
+                    if (city) {
+                      setSelectedCity(city);
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error loading cities:', error);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error loading states:', error);
+          }
+        }
+      }
+    };
+
+    initializeLocationData();
+  }, [formData.country, formData.state, formData.district, countries]);
 
   const handleFileChange = async (event) => {
     if (event.target.files && event.target.files[0]) {
@@ -91,6 +256,50 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         setUploadingImage(false);
       }
     }
+  };
+
+  const handleCountryChange = async (country) => {
+    setSelectedCountry(country);
+    setSelectedState(null);
+    setSelectedCity(null);
+    setStates([]);
+    setCities([]);
+    
+    setValue('country', country ? country.name : '');
+    setValue('state', '');
+    setValue('district', '');
+    
+    if (country) {
+      try {
+        const statesData = await GetState(country.id);
+        setStates(statesData);
+      } catch (error) {
+        console.error('Error loading states:', error);
+      }
+    }
+  };
+
+  const handleStateChange = async (state) => {
+    setSelectedState(state);
+    setSelectedCity(null);
+    setCities([]);
+    
+    setValue('state', state ? state.name : '');
+    setValue('district', '');
+    
+    if (state && selectedCountry) {
+      try {
+        const citiesData = await GetCity(selectedCountry.id, state.id);
+        setCities(citiesData);
+      } catch (error) {
+        console.error('Error loading cities:', error);
+      }
+    }
+  };
+
+  const handleCityChange = (city) => {
+    setSelectedCity(city);
+    setValue('district', city ? city.name : '');
   };
 
   const onSubmit = (dataFromForm) => {
@@ -300,70 +509,38 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Country */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Country *
-                  </label>
-                  <select
-                    {...register('country')}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  >
-                    <option value="">Select Country</option>
-                    {countries.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  {errors.country && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <span className="w-4 h-4">⚠️</span>
-                      {errors.country.message}
-                    </p>
-                  )}
-                </div>
+                <AutoSuggestField
+                  label="Country *"
+                  options={countries}
+                  value={selectedCountry?.name || ''}
+                  onChange={handleCountryChange}
+                  placeholder="Search and select country"
+                  disabled={false}
+                  error={errors.country}
+                  icon={FiMapPin}
+                />
 
                 {/* State */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    State
-                  </label>
-                  <select
-                    {...register('state')}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  >
-                    <option value="">Select State</option>
-                    {states.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                  {errors.state && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <span className="w-4 h-4">⚠️</span>
-                      {errors.state.message}
-                    </p>
-                  )}
-                </div>
+                <AutoSuggestField
+                  label="State"
+                  options={states}
+                  value={selectedState?.name || ''}
+                  onChange={handleStateChange}
+                  placeholder="Search and select state"
+                  disabled={!selectedCountry}
+                  error={errors.state}
+                />
 
-                {/* District */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    District
-                  </label>
-                  <select
-                    {...register('district')}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  >
-                    <option value="">Select District</option>
-                    {districts.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                  {errors.district && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <span className="w-4 h-4">⚠️</span>
-                      {errors.district.message}
-                    </p>
-                  )}
-                </div>
+                {/* District/City */}
+                <AutoSuggestField
+                  label="District/City"
+                  options={cities}
+                  value={selectedCity?.name || ''}
+                  onChange={handleCityChange}
+                  placeholder="Search and select city"
+                  disabled={!selectedState}
+                  error={errors.district}
+                />
               </div>
             </div>
           </div>
