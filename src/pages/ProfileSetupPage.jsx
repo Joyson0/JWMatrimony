@@ -279,16 +279,12 @@ function ProfileSetupPage() {
     }
   };
 
-  // Loading state with modern spinner
+  // Simple loading state - removed the duplicate animation
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
-            <div className="absolute inset-0 rounded-full h-16 w-16 border-4 border-transparent border-r-purple-600 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-          </div>
-          <p className="mt-6 text-gray-600 font-medium">Loading your profile...</p>
+          <p className="text-gray-600 font-medium">Loading your profile...</p>
           <p className="text-sm text-gray-500 mt-2">Please wait while we prepare everything for you</p>
         </div>
       </div>
