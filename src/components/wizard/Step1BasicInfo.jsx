@@ -66,7 +66,10 @@ const StrictAutoSuggestField = ({
         setSearchTerm(selectedOption.name);
         setIsValidSelection(true);
       } else {
-        setIsValidSelection(false);
+        // Don't clear if we have a value but haven't loaded options yet
+        if (options.length > 0) {
+          setIsValidSelection(false);
+        }
       }
     } else {
       setSearchTerm('');
@@ -77,8 +80,9 @@ const StrictAutoSuggestField = ({
   const handleSelect = (option) => {
     setSearchTerm(option.name);
     setIsValidSelection(true);
-    onChange(option);
     setIsOpen(false);
+    // Call onChange immediately with the selected option
+    onChange(option);
   };
 
   const handleInputChange = (e) => {
@@ -96,32 +100,37 @@ const StrictAutoSuggestField = ({
       onChange(exactMatch);
     } else {
       setIsValidSelection(false);
-      // If input doesn't match any option, clear the selection
-      if (inputValue === '') {
-        onChange(null);
-      }
+      // Don't clear the selection immediately while typing
     }
   };
 
   const handleBlur = () => {
+    // Use a longer timeout to allow for dropdown selection
     setTimeout(() => {
       setIsOpen(false);
       
-      // If the input doesn't match any valid option, show warning and clear
-      if (searchTerm && !isValidSelection) {
+      // Only validate and potentially clear after blur if the field is not empty
+      if (searchTerm && searchTerm.length > 0) {
         const exactMatch = options.find(option => 
           option.name.toLowerCase() === searchTerm.toLowerCase()
         );
         
         if (!exactMatch) {
-          // Clear invalid input after a short delay
-          setTimeout(() => {
-            setSearchTerm('');
-            onChange(null);
-          }, 100);
+          // Clear invalid input only if it doesn't match any option
+          setSearchTerm('');
+          setIsValidSelection(false);
+          onChange(null);
+        } else {
+          // Ensure the selection is properly set
+          setIsValidSelection(true);
+          onChange(exactMatch);
         }
       }
-    }, 200);
+    }, 300); // Increased timeout to allow dropdown selection
+  };
+
+  const handleFocus = () => {
+    setIsOpen(true);
   };
 
   const hasValidationError = !isValidSelection && searchTerm && searchTerm.length > 0;
@@ -137,7 +146,7 @@ const StrictAutoSuggestField = ({
           type="text"
           value={searchTerm}
           onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           disabled={disabled}
           className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 transition-all duration-200 ${
@@ -177,7 +186,11 @@ const StrictAutoSuggestField = ({
               <button
                 key={option.id}
                 type="button"
-                onClick={() => handleSelect(option)}
+                onMouseDown={(e) => {
+                  // Prevent blur event from firing before click
+                  e.preventDefault();
+                  handleSelect(option);
+                }}
                 className="w-full px-4 py-3 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none transition-colors duration-150 border-b border-gray-100 last:border-b-0"
               >
                 <span className="text-gray-900">{option.name}</span>
