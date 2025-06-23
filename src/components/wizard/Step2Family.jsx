@@ -9,7 +9,7 @@ import { FiUsers, FiPlus, FiTrash2, FiBriefcase } from 'react-icons/fi';
  * Step 2: Family Information Form
  * Modern design with dynamic sibling management
  */
-function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, totalSteps }) {
+function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, totalSteps, isLoading }) {
   const { register, handleSubmit, formState: { errors }, control } = useForm({
     resolver: yupResolver(familySchema),
     defaultValues: formData,
@@ -21,8 +21,8 @@ function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, to
   });
 
   const onSubmit = (data) => {
-    updateFormData(data);
-    onNext();
+    // Call onNext with the data to save
+    onNext(data);
   };
 
   return (
@@ -202,6 +202,7 @@ function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, to
             totalSteps={totalSteps} 
             onBack={onBack}
             onNext={handleSubmit(onSubmit)}
+            isLoading={isLoading}
           />
         </form>
       </div>

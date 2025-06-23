@@ -17,6 +17,7 @@ import Step4PartnerPreferences from '../components/wizard/Step4PartnerPreference
  * 
  * Modern multi-step wizard for creating/editing user profiles.
  * Features smooth animations, progress tracking, and responsive design.
+ * Saves data at each step for better user experience.
  */
 function ProfileSetupPage() {
   useTitle('Profile Setup Wizard - JW Matrimony');
@@ -119,10 +120,108 @@ function ProfileSetupPage() {
   };
 
   /**
-   * Navigation handlers with smooth transitions
+   * Save current form data to database
+   * Used for incremental saves at each step
    */
-  const handleNext = () => {
-    setCurrentStep(prev => Math.min(prev + 1, 4));
+  const saveCurrentData = async (dataToSave) => {
+    try {
+      // Prepare data for Appwrite (stringify JSON objects)
+      const preparedData = {
+        userId: dataToSave.userId,
+        email: dataToSave.email,
+        name: dataToSave.name || '',
+        gender: dataToSave.gender || '',
+        dateOfBirth: dataToSave.dateOfBirth || '',
+        height: dataToSave.height || 0,
+        maritalStatus: dataToSave.maritalStatus || '',
+        congregation: dataToSave.congregation || '',
+        motherTongue: dataToSave.motherTongue || '',
+        country: dataToSave.country || '',
+        state: dataToSave.state || '',
+        district: dataToSave.district || '',
+        profilePicFileId: dataToSave.profilePicFileId || null,
+        aboutMe: dataToSave.aboutMe || '',
+        education: dataToSave.education || '',
+        occupation: dataToSave.occupation || '',
+        hobbies: dataToSave.hobbies || [],
+        // Stringify nested objects for Appwrite storage
+        familyDetails: JSON.stringify(dataToSave.familyDetails || {}),
+        partnerPreferences: JSON.stringify(dataToSave.partnerPreferences || {}),
+      };
+
+      let response;
+      if (userProfileDocumentId) {
+        // Update existing profile
+        response = await db.profiles.update(userProfileDocumentId, preparedData);
+        console.log('Profile updated successfully:', response);
+      } else {
+        // Create new profile
+        response = await db.profiles.create(preparedData);
+        setUserProfileDocumentId(response.$id);
+        console.log('Profile created successfully:', response);
+      }
+
+      // Notify navbar of profile update
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
+      
+      return response;
+    } catch (error) {
+      console.error('Error saving profile data:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Navigation handlers with data saving
+   */
+  const handleNext = async (stepData = null) => {
+    setSubmitLoading(true);
+    
+    try {
+      // Update form data with new step data
+      let updatedFormData = formData;
+      if (stepData) {
+        updatedFormData = {
+          ...formData,
+          ...stepData,
+          // Deep merge nested objects if present
+          familyDetails: stepData.familyDetails 
+            ? { ...formData.familyDetails, ...stepData.familyDetails }
+            : formData.familyDetails,
+          partnerPreferences: stepData.partnerPreferences
+            ? { ...formData.partnerPreferences, ...stepData.partnerPreferences }
+            : formData.partnerPreferences,
+        };
+        setFormData(updatedFormData);
+      }
+
+      // Save current data to database
+      await saveCurrentData(updatedFormData);
+      
+      // Show success notification
+      const successDiv = document.createElement('div');
+      successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
+      successDiv.textContent = 'Progress saved! ✓';
+      document.body.appendChild(successDiv);
+      
+      setTimeout(() => {
+        successDiv.classList.remove('translate-x-full');
+      }, 100);
+      
+      setTimeout(() => {
+        successDiv.classList.add('translate-x-full');
+        setTimeout(() => document.body.removeChild(successDiv), 300);
+      }, 2000);
+
+      // Move to next step
+      setCurrentStep(prev => Math.min(prev + 1, 4));
+      
+    } catch (error) {
+      console.error('Error saving step data:', error);
+      alert('Failed to save progress. Please try again.');
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   const handleBack = () => {
@@ -147,29 +246,24 @@ function ProfileSetupPage() {
       // Deep merge nested objects if present
       if (newData.familyDetails) {
         updatedData.familyDetails = { ...prev.familyDetails, ...newData.familyDetails };
-        // console.log("familyDetails merged");
       }
       
       if (newData.partnerPreferences) {
         updatedData.partnerPreferences = { ...prev.partnerPreferences, ...newData.partnerPreferences };
-        // console.log("partnerPreferences merged");
       }
       
-      // console.log("Updated form data:", updatedData);
       return updatedData;
     });
   };
 
   /**
-   * Handle final form submission
+   * Handle final form submission (Step 4)
    * Saves complete profile data to database
    * 
    * @param {Object} finalStepData - Data from the final step
    */
   const handleSubmitFinal = async (finalStepData) => {
     setSubmitLoading(true);
-    // console.log("Final step data:", finalStepData);
-    console.log("Current form data:", formData);
     
     try {
       // Combine all form data
@@ -183,44 +277,8 @@ function ProfileSetupPage() {
         },
       };
 
-      // Prepare data for Appwrite (stringify JSON objects)
-      const dataToSave = {
-        userId: completeFormData.userId,
-        email: completeFormData.email,
-        name: completeFormData.name,
-        gender: completeFormData.gender,
-        dateOfBirth: completeFormData.dateOfBirth,
-        height: completeFormData.height,
-        maritalStatus: completeFormData.maritalStatus,
-        congregation: completeFormData.congregation,
-        motherTongue: completeFormData.motherTongue,
-        country: completeFormData.country,
-        state: completeFormData.state,
-        district: completeFormData.district,
-        profilePicFileId: completeFormData.profilePicFileId,
-        aboutMe: completeFormData.aboutMe,
-        education: completeFormData.education,
-        occupation: completeFormData.occupation,
-        hobbies: completeFormData.hobbies,
-        // Stringify nested objects for Appwrite storage
-        familyDetails: JSON.stringify(completeFormData.familyDetails),
-        partnerPreferences: JSON.stringify(completeFormData.partnerPreferences),
-      };
-
-      // console.log("Data to save:", dataToSave);
-
-      // Save to database (create or update)
-      let response;
-      if (userProfileDocumentId) {
-        response = await db.profiles.update(userProfileDocumentId, dataToSave);
-        console.log('Profile updated successfully:', response);
-      } else {
-        response = await db.profiles.create(dataToSave);
-        // console.log('Profile created successfully:', response);
-      }
-
-      // Notify navbar of profile update
-      window.dispatchEvent(new CustomEvent('profileUpdated'));
+      // Save final data
+      await saveCurrentData(completeFormData);
       
       // Success notification with smooth transition
       const successDiv = document.createElement('div');
@@ -239,8 +297,8 @@ function ProfileSetupPage() {
       
       navigate('/dashboard');
     } catch (error) {
-      console.error('Error saving profile:', error);
-      alert('Failed to save profile. Please try again.');
+      console.error('Error saving final profile:', error);
+      alert('Failed to complete profile setup. Please try again.');
     } finally {
       setSubmitLoading(false);
     }
@@ -258,6 +316,7 @@ function ProfileSetupPage() {
       totalSteps,
       onNext: handleNext,
       onBack: handleBack,
+      isLoading: submitLoading,
     };
 
     switch (currentStep) {
@@ -279,7 +338,7 @@ function ProfileSetupPage() {
     }
   };
 
-  // Simple loading state - removed the duplicate animation
+  // Simple loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">

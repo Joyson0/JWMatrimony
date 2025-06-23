@@ -10,7 +10,7 @@ import {FaUtensils} from 'react-icons/fa'
  * Step 3: About Yourself & Lifestyle Form
  * Modern design with rich text areas and lifestyle preferences
  */
-function Step3About({ formData, updateFormData, onNext, onBack, currentStep, totalSteps }) {
+function Step3About({ formData, updateFormData, onNext, onBack, currentStep, totalSteps, isLoading }) {
   const { register, handleSubmit, formState: { errors }, watch } = useForm({
     resolver: yupResolver(aboutSchema),
     defaultValues: formData,
@@ -20,8 +20,8 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
   const hobbiesText = watch('hobbies', '');
 
   const onSubmit = (data) => {
-    updateFormData(data);
-    onNext();
+    // Call onNext with the data to save
+    onNext(data);
   };
 
   return (
@@ -198,6 +198,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
             totalSteps={totalSteps} 
             onBack={onBack}
             onNext={handleSubmit(onSubmit)}
+            isLoading={isLoading}
           />
         </form>
       </div>

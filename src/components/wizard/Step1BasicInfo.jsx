@@ -240,7 +240,7 @@ const StrictAutoSuggestField = ({
  * Step 1: Basic Information Form
  * Modern, card-based design with icons and smooth animations
  */
-function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSteps }) {
+function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSteps, isLoading }) {
   const { register, handleSubmit, formState: { errors }, setValue, watch, reset, trigger } = useForm({
     resolver: yupResolver(basicInfoSchema),
     defaultValues: {
@@ -421,8 +421,9 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
       ...cleanData,
       dateOfBirth: formatInputDateToISOUTC(cleanData.dateOfBirth), // Convert to ISO UTC string
     };
-    updateFormData(dataToUpdate);
-    onNext();
+    
+    // Call onNext with the data to save
+    onNext(dataToUpdate);
   };
 
   return (
@@ -686,6 +687,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
             totalSteps={totalSteps} 
             onNext={handleSubmit(onSubmit)}
             isFirstStep={true}
+            isLoading={isLoading}
           />
         </form>
       </div>

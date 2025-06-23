@@ -9,7 +9,7 @@ import { FiHeart, FiUsers, FiCalendar, FiActivity } from 'react-icons/fi';
  * Step 4: Partner Preferences Form
  * Final step with comprehensive partner criteria
  */
-function Step4PartnerPreferences({ formData, updateFormData, onBack, onSubmit, currentStep, totalSteps }) {
+function Step4PartnerPreferences({ formData, updateFormData, onBack, onSubmit, currentStep, totalSteps, isLoading }) {
   const { register, handleSubmit, formState: { errors }, reset, getValues } = useForm({
     resolver: yupResolver(partnerPreferencesSchema),
     defaultValues: formData,
@@ -186,6 +186,7 @@ function Step4PartnerPreferences({ formData, updateFormData, onBack, onSubmit, c
             onBack={onBack}
             onNext={handleSubmit(finalSubmit)}
             isLastStep={true}
+            isLoading={isLoading}
           />
         </form>
       </div>
