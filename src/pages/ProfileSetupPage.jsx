@@ -17,7 +17,7 @@ import Step4PartnerPreferences from '../components/wizard/Step4PartnerPreference
  * 
  * Modern multi-step wizard for creating/editing user profiles.
  * Features smooth animations, progress tracking, and responsive design.
- * Saves data at each step for better user experience.
+ * Saves data only when changes are detected for optimal performance.
  */
 function ProfileSetupPage() {
   useTitle('Profile Setup Wizard - JW Matrimony');
@@ -59,10 +59,65 @@ function ProfileSetupPage() {
     partnerPreferences: {},
   });
 
+  // Store original data for comparison
+  const [originalData, setOriginalData] = useState({});
+
   // Load existing profile data or initialize for new user
   useEffect(() => {
     loadProfile();
   }, [navigate]);
+
+  /**
+   * Deep comparison function to check if objects are equal
+   */
+  const deepEqual = (obj1, obj2) => {
+    if (obj1 === obj2) return true;
+    
+    if (obj1 == null || obj2 == null) return obj1 === obj2;
+    
+    if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return obj1 === obj2;
+    
+    if (Array.isArray(obj1) !== Array.isArray(obj2)) return false;
+    
+    if (Array.isArray(obj1)) {
+      if (obj1.length !== obj2.length) return false;
+      for (let i = 0; i < obj1.length; i++) {
+        if (!deepEqual(obj1[i], obj2[i])) return false;
+      }
+      return true;
+    }
+    
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+    
+    if (keys1.length !== keys2.length) return false;
+    
+    for (let key of keys1) {
+      if (!keys2.includes(key)) return false;
+      if (!deepEqual(obj1[key], obj2[key])) return false;
+    }
+    
+    return true;
+  };
+
+  /**
+   * Check if form data has changed compared to original data
+   */
+  const hasDataChanged = (currentData, originalData) => {
+    // Create clean versions for comparison (remove validation helper fields)
+    const cleanCurrent = { ...currentData };
+    const cleanOriginal = { ...originalData };
+    
+    // Remove validation helper fields that shouldn't be compared
+    delete cleanCurrent.countryValid;
+    delete cleanCurrent.stateValid;
+    delete cleanCurrent.districtValid;
+    delete cleanOriginal.countryValid;
+    delete cleanOriginal.stateValid;
+    delete cleanOriginal.districtValid;
+    
+    return !deepEqual(cleanCurrent, cleanOriginal);
+  };
 
   /**
    * Load existing profile data or initialize for new user
@@ -71,11 +126,12 @@ function ProfileSetupPage() {
     setLoading(true);
     try {
       const currentUser = await account.get();
-      setFormData(prev => ({ 
-        ...prev, 
+      const baseData = { 
         userId: currentUser.$id, 
         email: currentUser.email 
-      }));
+      };
+      
+      setFormData(prev => ({ ...prev, ...baseData }));
 
       // Check for existing profile
       const response = await db.profiles.list([
@@ -93,8 +149,8 @@ function ProfileSetupPage() {
         }
 
         // Merge existing data with form structure
-        setFormData(prev => ({
-          ...prev,
+        const loadedData = {
+          ...baseData,
           ...existingProfile,
           dateOfBirth: formattedDateOfBirth,
           // Handle nested JSON objects (parse if stored as strings)
@@ -104,11 +160,15 @@ function ProfileSetupPage() {
           partnerPreferences: typeof existingProfile.partnerPreferences === 'string'
             ? JSON.parse(existingProfile.partnerPreferences) 
             : existingProfile.partnerPreferences || {},
-        }));
+        };
+
+        setFormData(loadedData);
+        setOriginalData(loadedData); // Store original data for comparison
         
         console.log("Loaded existing profile:", existingProfile);
       } else {
         console.log("No existing profile found. Starting new setup.");
+        setOriginalData(baseData); // Store base data as original for new users
       }
     } catch (error) {
       console.error('Error loading profile or user:', error);
@@ -172,7 +232,32 @@ function ProfileSetupPage() {
   };
 
   /**
-   * Navigation handlers with data saving
+   * Show notification message
+   */
+  const showNotification = (message, type = 'success') => {
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-gray-500';
+    
+    const notificationDiv = document.createElement('div');
+    notificationDiv.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+    notificationDiv.textContent = message;
+    document.body.appendChild(notificationDiv);
+    
+    setTimeout(() => {
+      notificationDiv.classList.remove('translate-x-full');
+    }, 100);
+    
+    setTimeout(() => {
+      notificationDiv.classList.add('translate-x-full');
+      setTimeout(() => {
+        if (document.body.contains(notificationDiv)) {
+          document.body.removeChild(notificationDiv);
+        }
+      }, 300);
+    }, 3000);
+  };
+
+  /**
+   * Navigation handlers with change detection and conditional saving
    */
   const handleNext = async (stepData = null) => {
     setSubmitLoading(true);
@@ -195,25 +280,24 @@ function ProfileSetupPage() {
         setFormData(updatedFormData);
       }
 
-      // Save current data to database
-      await saveCurrentData(updatedFormData);
+      // Check if data has actually changed
+      const dataChanged = hasDataChanged(updatedFormData, originalData);
       
-      // Show success notification
-      const successDiv = document.createElement('div');
-      successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
-      successDiv.textContent = 'Progress saved! ✓';
-      document.body.appendChild(successDiv);
-      
-      setTimeout(() => {
-        successDiv.classList.remove('translate-x-full');
-      }, 100);
-      
-      setTimeout(() => {
-        successDiv.classList.add('translate-x-full');
-        setTimeout(() => document.body.removeChild(successDiv), 300);
-      }, 2000);
+      if (dataChanged) {
+        // Save current data to database
+        await saveCurrentData(updatedFormData);
+        
+        // Update original data to reflect saved state
+        setOriginalData(updatedFormData);
+        
+        // Show success notification
+        showNotification('Progress saved! ✓', 'success');
+      } else {
+        // Show info notification that no changes were detected
+        showNotification('No changes to save', 'info');
+      }
 
-      // Move to next step
+      // Move to next step regardless of whether data was saved
       setCurrentStep(prev => Math.min(prev + 1, 4));
       
     } catch (error) {
@@ -258,7 +342,7 @@ function ProfileSetupPage() {
 
   /**
    * Handle final form submission (Step 4)
-   * Saves complete profile data to database
+   * Saves complete profile data to database only if changes detected
    * 
    * @param {Object} finalStepData - Data from the final step
    */
@@ -277,25 +361,28 @@ function ProfileSetupPage() {
         },
       };
 
-      // Save final data
-      await saveCurrentData(completeFormData);
+      // Check if data has actually changed
+      const dataChanged = hasDataChanged(completeFormData, originalData);
       
-      // Success notification with smooth transition
-      const successDiv = document.createElement('div');
-      successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
-      successDiv.textContent = 'Profile setup complete! 🎉';
-      document.body.appendChild(successDiv);
+      if (dataChanged) {
+        // Save final data
+        await saveCurrentData(completeFormData);
+        
+        // Update original data to reflect saved state
+        setOriginalData(completeFormData);
+        
+        // Success notification with completion message
+        showNotification('Profile setup complete! 🎉', 'success');
+      } else {
+        // Show completion message even if no changes
+        showNotification('Profile setup complete! 🎉', 'success');
+      }
       
+      // Navigate to dashboard after a brief delay
       setTimeout(() => {
-        successDiv.classList.remove('translate-x-full');
-      }, 100);
+        navigate('/dashboard');
+      }, 1500);
       
-      setTimeout(() => {
-        successDiv.classList.add('translate-x-full');
-        setTimeout(() => document.body.removeChild(successDiv), 300);
-      }, 3000);
-      
-      navigate('/dashboard');
     } catch (error) {
       console.error('Error saving final profile:', error);
       alert('Failed to complete profile setup. Please try again.');
@@ -343,6 +430,7 @@ function ProfileSetupPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 font-medium">Loading your profile...</p>
           <p className="text-sm text-gray-500 mt-2">Please wait while we prepare everything for you</p>
         </div>
