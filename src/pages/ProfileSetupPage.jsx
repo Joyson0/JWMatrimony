@@ -101,22 +101,53 @@ function ProfileSetupPage() {
   };
 
   /**
+   * Normalize data for comparison (handle type conversions and formatting)
+   */
+  const normalizeDataForComparison = (data) => {
+    const normalized = { ...data };
+    
+    // Normalize hobbies - ensure it's always an array for comparison
+    if (typeof normalized.hobbies === 'string') {
+      normalized.hobbies = normalized.hobbies.split(',').map(item => item.trim()).filter(item => item);
+    } else if (!Array.isArray(normalized.hobbies)) {
+      normalized.hobbies = [];
+    }
+    
+    // Normalize numeric fields
+    if (normalized.height) {
+      normalized.height = Number(normalized.height);
+    }
+    if (normalized.annualIncome) {
+      normalized.annualIncome = Number(normalized.annualIncome);
+    }
+    
+    // Remove validation helper fields that shouldn't be compared
+    delete normalized.countryValid;
+    delete normalized.stateValid;
+    delete normalized.districtValid;
+    
+    return normalized;
+  };
+
+  /**
    * Check if form data has changed compared to original data
    */
   const hasDataChanged = (currentData, originalData) => {
-    // Create clean versions for comparison (remove validation helper fields)
-    const cleanCurrent = { ...currentData };
-    const cleanOriginal = { ...originalData };
+    const normalizedCurrent = normalizeDataForComparison(currentData);
+    const normalizedOriginal = normalizeDataForComparison(originalData);
     
-    // Remove validation helper fields that shouldn't be compared
-    delete cleanCurrent.countryValid;
-    delete cleanCurrent.stateValid;
-    delete cleanCurrent.districtValid;
-    delete cleanOriginal.countryValid;
-    delete cleanOriginal.stateValid;
-    delete cleanOriginal.districtValid;
+    const changed = !deepEqual(normalizedCurrent, normalizedOriginal);
     
-    return !deepEqual(cleanCurrent, cleanOriginal);
+    // Debug logging
+    if (changed) {
+      console.log('Data has changed:');
+      console.log('Current (normalized):', normalizedCurrent);
+      console.log('Original (normalized):', normalizedOriginal);
+    } else {
+      console.log('No changes detected');
+    }
+    
+    return changed;
   };
 
   /**
@@ -160,6 +191,12 @@ function ProfileSetupPage() {
           partnerPreferences: typeof existingProfile.partnerPreferences === 'string'
             ? JSON.parse(existingProfile.partnerPreferences) 
             : existingProfile.partnerPreferences || {},
+          // Ensure hobbies is always an array
+          hobbies: Array.isArray(existingProfile.hobbies) 
+            ? existingProfile.hobbies 
+            : existingProfile.hobbies 
+              ? [existingProfile.hobbies] 
+              : []
         };
 
         setFormData(loadedData);
@@ -203,7 +240,9 @@ function ProfileSetupPage() {
         aboutMe: dataToSave.aboutMe || '',
         education: dataToSave.education || '',
         occupation: dataToSave.occupation || '',
-        hobbies: dataToSave.hobbies || [],
+        annualIncome: dataToSave.annualIncome || null,
+        diet: dataToSave.diet || '',
+        hobbies: Array.isArray(dataToSave.hobbies) ? dataToSave.hobbies : [],
         // Stringify nested objects for Appwrite storage
         familyDetails: JSON.stringify(dataToSave.familyDetails || {}),
         partnerPreferences: JSON.stringify(dataToSave.partnerPreferences || {}),

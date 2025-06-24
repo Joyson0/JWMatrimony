@@ -13,15 +13,29 @@ import {FaUtensils} from 'react-icons/fa'
 function Step3About({ formData, updateFormData, onNext, onBack, currentStep, totalSteps, isLoading }) {
   const { register, handleSubmit, formState: { errors }, watch } = useForm({
     resolver: yupResolver(aboutSchema),
-    defaultValues: formData,
+    defaultValues: {
+      ...formData,
+      // Ensure hobbies is properly formatted for the input field
+      hobbies: Array.isArray(formData.hobbies) ? formData.hobbies.join(', ') : (formData.hobbies || '')
+    },
   });
 
   const aboutMeText = watch('aboutMe', '');
   const hobbiesText = watch('hobbies', '');
 
   const onSubmit = (data) => {
-    // Call onNext with the data to save
-    onNext(data);
+    // Process hobbies field to convert comma-separated string to array
+    const processedData = {
+      ...data,
+      hobbies: typeof data.hobbies === 'string' 
+        ? data.hobbies.split(',').map(item => item.trim()).filter(item => item)
+        : Array.isArray(data.hobbies) 
+          ? data.hobbies 
+          : []
+    };
+
+    // Call onNext with the processed data
+    onNext(processedData);
   };
 
   return (
@@ -166,18 +180,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
             <div className="relative">
               <input
                 type="text"
-                {...register('hobbies', {
-                  setValueAs: (value) => {
-                    if (typeof value === 'string') {
-                      return value.split(',').map(item => item.trim()).filter(item => item);
-                    }
-                    if (Array.isArray(value)) {
-                      return value;
-                    }
-                    return [];
-                  },
-                })}
-                defaultValue={formData.hobbies ? formData.hobbies.join(', ') : ''}
+                {...register('hobbies')}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                 placeholder="e.g., Reading, Cooking, Traveling, Photography, Music"
               />
