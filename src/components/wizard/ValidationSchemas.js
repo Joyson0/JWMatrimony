@@ -63,7 +63,26 @@ export const aboutSchema = yup.object().shape({
   aboutMe: yup.string().optional('Please tell us something about yourself').max(2000, 'Maximum 2000 characters'),
   education: yup.string().optional(),
   occupation: yup.string().optional(),
-  hobbies: yup.array().of(yup.string()).optional(), // Array of strings
+  annualIncome: yup.number().nullable().optional().min(0, 'Annual income cannot be negative'),
+  diet: yup.string().optional(),
+  // Updated hobbies validation to handle both string and array formats
+  hobbies: yup.mixed().optional().test(
+    'hobbies-format',
+    'Hobbies must be a valid format',
+    function(value) {
+      // Allow empty values
+      if (!value || value === '') return true;
+      
+      // Allow arrays (already processed)
+      if (Array.isArray(value)) return true;
+      
+      // Allow strings (will be processed later)
+      if (typeof value === 'string') return true;
+      
+      // Reject other types
+      return false;
+    }
+  ),
 });
 
 export const partnerPreferencesSchema = yup.object().shape({
