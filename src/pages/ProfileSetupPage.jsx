@@ -117,9 +117,6 @@ function ProfileSetupPage() {
     if (normalized.height) {
       normalized.height = Number(normalized.height);
     }
-    if (normalized.annualIncome) {
-      normalized.annualIncome = Number(normalized.annualIncome);
-    }
     
     // Remove validation helper fields that shouldn't be compared
     delete normalized.countryValid;
@@ -240,8 +237,6 @@ function ProfileSetupPage() {
         aboutMe: dataToSave.aboutMe || '',
         education: dataToSave.education || '',
         occupation: dataToSave.occupation || '',
-        annualIncome: dataToSave.annualIncome || null,
-        diet: dataToSave.diet || '',
         hobbies: Array.isArray(dataToSave.hobbies) ? dataToSave.hobbies : [],
         // Stringify nested objects for Appwrite storage
         familyDetails: JSON.stringify(dataToSave.familyDetails || {}),

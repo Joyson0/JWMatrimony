@@ -63,8 +63,6 @@ export const aboutSchema = yup.object().shape({
   aboutMe: yup.string().optional('Please tell us something about yourself').max(2000, 'Maximum 2000 characters'),
   education: yup.string().optional(),
   occupation: yup.string().optional(),
-  annualIncome: yup.number().nullable().optional().min(0, 'Annual income cannot be negative'),
-  diet: yup.string().optional(),
   // Updated hobbies validation to handle both string and array formats
   hobbies: yup.mixed().optional().test(
     'hobbies-format',

@@ -3,8 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { aboutSchema } from './ValidationSchemas';
 import WizardNavigation from './WizardNavigation';
-import { FiUser, FiBook, FiBriefcase, FiDollarSign, FiHeart } from 'react-icons/fi';
-import {FaUtensils} from 'react-icons/fa'
+import { FiUser, FiBook, FiBriefcase, FiHeart } from 'react-icons/fi';
 
 /**
  * Step 3: About Yourself & Lifestyle Form
@@ -119,52 +118,6 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
                   <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
                     <span className="w-4 h-4">⚠️</span>
                     {errors.occupation.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Annual Income */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <FiDollarSign className="w-4 h-4" />
-                  Annual Income (Lakhs INR)
-                </label>
-                <input
-                  type="number"
-                  {...register('annualIncome')}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                  placeholder="e.g., 5, 10, 15"
-                  min="0"
-                  step="0.1"
-                />
-                {errors.annualIncome && (
-                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                    <span className="w-4 h-4">⚠️</span>
-                    {errors.annualIncome.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Diet */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <FaUtensils className="w-4 h-4" />
-                  Diet Preference
-                </label>
-                <select
-                  {...register('diet')}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                >
-                  <option value="">Select Diet</option>
-                  <option value="Vegetarian">Vegetarian</option>
-                  <option value="Non-Vegetarian">Non-Vegetarian</option>
-                  <option value="Eggetarian">Eggetarian</option>
-                  <option value="Vegan">Vegan</option>
-                </select>
-                {errors.diet && (
-                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                    <span className="w-4 h-4">⚠️</span>
-                    {errors.diet.message}
                   </p>
                 )}
               </div>
