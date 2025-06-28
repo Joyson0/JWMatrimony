@@ -5,7 +5,6 @@ import { basicInfoSchema } from './ValidationSchemas';
 import { storage } from '../../lib/appwrite';
 import { ID } from 'appwrite';
 import WizardNavigation from './WizardNavigation';
-import ImageCropper from '../ImageCropper';
 import { FiUpload, FiUser, FiCalendar, FiMapPin, FiChevronDown, FiAlertCircle } from 'react-icons/fi';
 import { GetCountries, GetState, GetCity } from 'react-country-state-city';
 
@@ -251,8 +250,6 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
 
   const profilePicFileId = watch('profilePicFileId');
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [showCropper, setShowCropper] = useState(false);
-  const [selectedImageSrc, setSelectedImageSrc] = useState(null);
   const [profileImageUrl, setProfileImageUrl] = useState(null);
   const [imageLoadError, setImageLoadError] = useState(false);
   
@@ -280,15 +277,8 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           console.log('Generating preview URL for file ID:', profilePicFileId);
           console.log('Using bucket ID:', ProfilePicBucketId);
           
-          // Generate the preview URL - this returns a URL object, not a string
-          const previewUrl = storage.getFilePreview(
-            ProfilePicBucketId, 
-            profilePicFileId,
-            200, // width
-            200, // height
-            'center', // gravity
-            100 // quality
-          );
+          // Generate the preview URL without transformation
+          const previewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
           
           // Convert URL object to string
           const imageUrl = previewUrl.toString();
@@ -394,54 +384,28 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         return;
       }
       
-      // Create image URL for cropper
-      const imageUrl = URL.createObjectURL(file);
-      setSelectedImageSrc(imageUrl);
-      setShowCropper(true);
-    }
-  };
-
-  const handleCropComplete = async (croppedImageBlob) => {
-    setUploadingImage(true);
-    setShowCropper(false);
-    
-    try {
-      // Create a File object from the blob
-      const croppedFile = new File([croppedImageBlob], 'profile-pic.jpg', {
-        type: 'image/jpeg',
-      });
+      setUploadingImage(true);
       
-      const uploadedFile = await storage.createFile(
-        ProfilePicBucketId,
-        ID.unique(),
-        croppedFile
-      );
-      
-      console.log('File uploaded successfully:', uploadedFile);
-      setValue('profilePicFileId', uploadedFile.$id);
-      
-      // Trigger navbar update
-      window.dispatchEvent(new CustomEvent('profileUpdated'));
-      
-    } catch (error) {
-      console.error('File upload failed:', error);
-      alert('Failed to upload profile picture. Please try again.');
-      setValue('profilePicFileId', null);
-    } finally {
-      setUploadingImage(false);
-      // Clean up the object URL
-      if (selectedImageSrc) {
-        URL.revokeObjectURL(selectedImageSrc);
-        setSelectedImageSrc(null);
+      try {
+        const uploadedFile = await storage.createFile(
+          ProfilePicBucketId,
+          ID.unique(),
+          file
+        );
+        
+        console.log('File uploaded successfully:', uploadedFile);
+        setValue('profilePicFileId', uploadedFile.$id);
+        
+        // Trigger navbar update
+        window.dispatchEvent(new CustomEvent('profileUpdated'));
+        
+      } catch (error) {
+        console.error('File upload failed:', error);
+        alert('Failed to upload profile picture. Please try again.');
+        setValue('profilePicFileId', null);
+      } finally {
+        setUploadingImage(false);
       }
-    }
-  };
-
-  const handleCropCancel = () => {
-    setShowCropper(false);
-    if (selectedImageSrc) {
-      URL.revokeObjectURL(selectedImageSrc);
-      setSelectedImageSrc(null);
     }
   };
 
@@ -804,14 +768,6 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           />
         </form>
       </div>
-
-      {/* Image Cropper Modal */}
-      <ImageCropper
-        imageSrc={selectedImageSrc}
-        onCropComplete={handleCropComplete}
-        onCancel={handleCropCancel}
-        isOpen={showCropper}
-      />
     </div>
   );
 }

@@ -435,7 +435,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
               {additionalPhotos.map((photoId, index) => (
                 <div key={photoId} className="relative group">
                   <img
-                    src={storage.getFilePreview(AdditionalPhotosBucketId, photoId).href}
+                    src={storage.getFileView(AdditionalPhotosBucketId, photoId).href}
                     alt={`Additional photo ${index + 1}`}
                     className="w-full h-48 object-cover rounded-lg border border-gray-300"
                   />
