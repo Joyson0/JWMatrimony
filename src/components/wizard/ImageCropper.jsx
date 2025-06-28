@@ -96,12 +96,17 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
 
     // Clamp crop coordinates to image boundaries
     pixelCrop.x = Math.max(0, Math.min(pixelCrop.x, naturalWidth - pixelCrop.width));
-    pixelCrop.y = Math.max(0, Math.min(pixelCrop.y, naturalHeight - pixelCrop.height));
+    pixelCrop.y = Math.max(0, Math.min(pixelCrop.y, naturalHeight - pixelCrop.y));
     pixelCrop.width = Math.min(pixelCrop.width, naturalWidth - pixelCrop.x);
     pixelCrop.height = Math.min(pixelCrop.height, naturalHeight - pixelCrop.y);
 
-    // Set canvas size to a fixed output size (400x400 for good quality)
-    const outputSize = 400;
+    // Force the crop to be perfectly square by using the smaller dimension
+    const cropSize = Math.min(pixelCrop.width, pixelCrop.height);
+    pixelCrop.width = cropSize;
+    pixelCrop.height = cropSize;
+
+    // Set canvas size to match the crop size (maintaining aspect ratio)
+    const outputSize = Math.min(cropSize, 400); // Cap at 400px for reasonable file size
     canvas.width = outputSize;
     canvas.height = outputSize;
 
@@ -123,13 +128,13 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
     }
 
     try {
-      // Draw the cropped portion of the image to fill the entire canvas
+      // Draw the cropped portion maintaining 1:1 aspect ratio
       ctx.drawImage(
         image,
         pixelCrop.x,      // Source x
         pixelCrop.y,      // Source y
-        pixelCrop.width,  // Source width
-        pixelCrop.height, // Source height
+        cropSize,         // Source width (square)
+        cropSize,         // Source height (square)
         0,                // Destination x
         0,                // Destination y
         outputSize,       // Destination width
@@ -139,8 +144,8 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
       console.log('Successfully drew image to canvas with parameters:', {
         sourceX: pixelCrop.x,
         sourceY: pixelCrop.y,
-        sourceWidth: pixelCrop.width,
-        sourceHeight: pixelCrop.height,
+        sourceWidth: cropSize,
+        sourceHeight: cropSize,
         destX: 0,
         destY: 0,
         destWidth: outputSize,
@@ -175,7 +180,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
       } else {
         console.error('Failed to create blob from canvas');
       }
-    }, 'image/jpeg', 0.95); // Increased quality to 0.95
+    }, 'image/jpeg', 0.95);
   }, [completedCrop, rotation, onCropComplete, imageLoaded]);
 
   return (
@@ -184,7 +189,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
           <h3 className="text-xl font-bold text-white">Crop Your Profile Picture</h3>
-          <p className="text-blue-100 text-sm mt-1">The circular area shows exactly what your final image will look like</p>
+          <p className="text-blue-100 text-sm mt-1">Adjust the square crop area to select your profile picture</p>
         </div>
 
         {/* Cropper Content */}
