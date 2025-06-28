@@ -302,6 +302,9 @@ function ProfileSetupPage() {
         education: dataToSave.education || '',
         occupation: dataToSave.occupation || '',
         hobbies: Array.isArray(dataToSave.hobbies) ? dataToSave.hobbies : [],
+        // Keep arrays as native JavaScript arrays for Appwrite
+        languages: Array.isArray(dataToSave.languages) ? dataToSave.languages : [],
+        additionalPhotos: Array.isArray(dataToSave.additionalPhotos) ? dataToSave.additionalPhotos : [],
         // Stringify nested objects for Appwrite storage
         familyDetails: JSON.stringify(dataToSave.familyDetails || {}),
         partnerPreferences: JSON.stringify(dataToSave.partnerPreferences || {}),
@@ -310,8 +313,6 @@ function ProfileSetupPage() {
           servicePosition: '',
           serviceType: ''
         }),
-        languages: JSON.stringify(dataToSave.languages || []),
-        additionalPhotos: JSON.stringify(dataToSave.additionalPhotos || []),
       };
 
       let response;
