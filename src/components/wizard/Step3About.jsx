@@ -14,14 +14,12 @@ const AdditionalPhotosBucketId = import.meta.env.VITE_BUCKET_ID;
  * Modern design with rich text areas and lifestyle preferences
  */
 function Step3About({ formData, updateFormData, onNext, onBack, currentStep, totalSteps, isLoading }) {
-  // Extract spiritual status from array for form usage
-  const spiritualStatusObject = Array.isArray(formData.spiritualStatus) && formData.spiritualStatus.length > 0
-    ? formData.spiritualStatus[0]
-    : {
-        baptismStatus: 'Baptised Publisher',
-        servicePosition: '',
-        serviceType: ''
-      };
+  // Extract spiritual status object for form usage
+  const spiritualStatusObject = formData.spiritualStatus || {
+    baptismStatus: 'Baptised Publisher',
+    servicePosition: '',
+    serviceType: ''
+  };
 
   const { register, handleSubmit, formState: { errors }, watch, control, setValue } = useForm({
     resolver: yupResolver(aboutSchema),
