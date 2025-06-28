@@ -16,6 +16,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
   const [crop, setCrop] = useState();
   const [completedCrop, setCompletedCrop] = useState();
   const [rotation, setRotation] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -24,6 +25,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
    */
   const onImageLoad = useCallback((e) => {
     const { width, height } = e.currentTarget;
+    setImageLoaded(true);
     
     // Create a centered square crop
     const crop = centerCrop(
@@ -41,6 +43,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
     );
     
     setCrop(crop);
+    setCompletedCrop(crop);
   }, []);
 
   /**
@@ -54,7 +57,8 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
    * Generate cropped image and call completion callback
    */
   const handleCropComplete = useCallback(async () => {
-    if (!completedCrop || !imgRef.current || !canvasRef.current) {
+    if (!completedCrop || !imgRef.current || !canvasRef.current || !imageLoaded) {
+      console.error('Missing required elements for cropping');
       return;
     }
 
@@ -66,43 +70,70 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
       throw new Error('No 2d context');
     }
 
+    // Convert percentage crop to pixel crop
     const pixelCrop = convertToPixelCrop(
       completedCrop,
       image.naturalWidth,
       image.naturalHeight
     );
 
+    console.log('Crop data:', {
+      completedCrop,
+      pixelCrop,
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+      displayWidth: image.width,
+      displayHeight: image.height
+    });
+
+    // Ensure we have valid crop dimensions
+    if (pixelCrop.width <= 0 || pixelCrop.height <= 0) {
+      console.error('Invalid crop dimensions');
+      return;
+    }
+
     // Set canvas size to the crop size
-    canvas.width = pixelCrop.width;
-    canvas.height = pixelCrop.height;
+    const outputSize = Math.min(pixelCrop.width, pixelCrop.height);
+    canvas.width = outputSize;
+    canvas.height = outputSize;
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Apply rotation if needed
+    // Save context state
+    ctx.save();
+
+    // Handle rotation
     if (rotation !== 0) {
-      ctx.save();
+      // Move to center of canvas
       ctx.translate(canvas.width / 2, canvas.height / 2);
+      // Rotate
       ctx.rotate((rotation * Math.PI) / 180);
+      // Move back
       ctx.translate(-canvas.width / 2, -canvas.height / 2);
     }
 
-    // Draw the cropped image
-    ctx.drawImage(
-      image,
-      pixelCrop.x,
-      pixelCrop.y,
-      pixelCrop.width,
-      pixelCrop.height,
-      0,
-      0,
-      pixelCrop.width,
-      pixelCrop.height
-    );
-
-    if (rotation !== 0) {
+    try {
+      // Draw the cropped portion of the image
+      ctx.drawImage(
+        image,
+        pixelCrop.x,
+        pixelCrop.y,
+        pixelCrop.width,
+        pixelCrop.height,
+        0,
+        0,
+        outputSize,
+        outputSize
+      );
+    } catch (error) {
+      console.error('Error drawing image to canvas:', error);
       ctx.restore();
+      return;
     }
+
+    // Restore context state
+    ctx.restore();
 
     // Convert canvas to blob
     canvas.toBlob((blob) => {
@@ -113,10 +144,18 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
           lastModified: Date.now(),
         });
         
+        console.log('Cropped file created:', {
+          name: croppedFile.name,
+          size: croppedFile.size,
+          type: croppedFile.type
+        });
+        
         onCropComplete(croppedFile);
+      } else {
+        console.error('Failed to create blob from canvas');
       }
     }, 'image/jpeg', 0.9);
-  }, [completedCrop, rotation, onCropComplete]);
+  }, [completedCrop, rotation, onCropComplete, imageLoaded]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -131,7 +170,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
         <div className="p-6">
           <div className="flex flex-col items-center">
             {/* Image Cropper */}
-            <div className="mb-6 max-w-full max-h-96 overflow-auto border border-gray-300 rounded-lg">
+            <div className="mb-6 max-w-full max-h-96 overflow-auto border border-gray-300 rounded-lg bg-gray-50">
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -139,8 +178,10 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
                 aspect={1}
                 circularCrop={true}
                 keepSelection={true}
-                minWidth={100}
-                minHeight={100}
+                minWidth={50}
+                minHeight={50}
+                maxWidth={500}
+                maxHeight={500}
               >
                 <img
                   ref={imgRef}
@@ -149,13 +190,31 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
                   style={{ 
                     transform: `rotate(${rotation}deg)`,
                     maxWidth: '100%',
-                    maxHeight: '400px'
+                    maxHeight: '400px',
+                    display: 'block'
                   }}
                   onLoad={onImageLoad}
                   crossOrigin="anonymous"
                 />
               </ReactCrop>
             </div>
+
+            {/* Crop Preview */}
+            {completedCrop && imageLoaded && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2 text-center">Preview:</p>
+                <div className="w-24 h-24 border-2 border-gray-300 rounded-full overflow-hidden bg-gray-100">
+                  <canvas
+                    ref={canvasRef}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Controls */}
             <div className="flex items-center gap-4 mb-6">
@@ -168,7 +227,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
                 Rotate
               </button>
               
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 text-center">
                 Drag to reposition • Resize corners to adjust size
               </div>
             </div>
@@ -187,7 +246,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
               <button
                 type="button"
                 onClick={handleCropComplete}
-                disabled={!completedCrop}
+                disabled={!completedCrop || !imageLoaded}
                 className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors font-medium shadow-lg"
               >
                 <FiCheck className="w-4 h-4" />
@@ -196,12 +255,6 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
             </div>
           </div>
         </div>
-
-        {/* Hidden canvas for generating cropped image */}
-        <canvas
-          ref={canvasRef}
-          style={{ display: 'none' }}
-        />
       </div>
     </div>
   );
