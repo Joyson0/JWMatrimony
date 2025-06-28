@@ -284,18 +284,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           // Use getFilePreview instead of getFileView for better compatibility
           const previewUrl = storage.getFilePreview(
             ProfilePicBucketId, 
-            profilePicFileId,
-            400, // width
-            400, // height
-            'center', // gravity
-            100, // quality
-            0, // border width
-            '', // border color
-            0, // border radius
-            1, // opacity
-            0, // rotation
-            '', // background
-            'jpg' // output format
+            profilePicFileId
           );
           
           // Convert URL object to string
