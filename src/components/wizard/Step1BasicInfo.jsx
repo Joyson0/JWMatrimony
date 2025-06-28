@@ -406,22 +406,58 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     }
     
     try {
+      // Store the previous file ID for deletion
+      const previousFileId = profilePicFileId;
+      
+      // Upload the new cropped image
       const uploadedFile = await storage.createFile(
         ProfilePicBucketId,
         ID.unique(),
         croppedFile
       );
       
-      console.log('File uploaded successfully:', uploadedFile);
+      console.log('New profile picture uploaded successfully:', uploadedFile);
+      
+      // Update the form with the new file ID
       setValue('profilePicFileId', uploadedFile.$id);
       
-      // Trigger navbar update
+      // Delete the previous image if it exists
+      if (previousFileId) {
+        try {
+          await storage.deleteFile(ProfilePicBucketId, previousFileId);
+          console.log('Previous profile picture deleted:', previousFileId);
+        } catch (deleteError) {
+          console.warn('Could not delete previous profile picture:', deleteError);
+          // Don't throw error here as the new upload was successful
+        }
+      }
+      
+      // Trigger immediate navbar update
       window.dispatchEvent(new CustomEvent('profileUpdated'));
+      
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
+      notification.textContent = 'Profile picture updated successfully! ✓';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+      }, 100);
+      
+      setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }, 3000);
       
     } catch (error) {
       console.error('File upload failed:', error);
       alert('Failed to upload profile picture. Please try again.');
-      setValue('profilePicFileId', null);
+      setValue('profilePicFileId', profilePicFileId); // Revert to previous value
     } finally {
       setUploadingImage(false);
     }
