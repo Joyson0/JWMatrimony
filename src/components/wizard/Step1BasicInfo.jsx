@@ -5,6 +5,7 @@ import { basicInfoSchema } from './ValidationSchemas';
 import { storage } from '../../lib/appwrite';
 import { ID } from 'appwrite';
 import WizardNavigation from './WizardNavigation';
+import ImageCropper from './ImageCropper';
 import { FiUpload, FiUser, FiCalendar, FiMapPin, FiChevronDown, FiAlertCircle } from 'react-icons/fi';
 import { GetCountries, GetState, GetCity } from 'react-country-state-city';
 
@@ -252,6 +253,8 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
   const [uploadingImage, setUploadingImage] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState(null);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [showCropper, setShowCropper] = useState(false);
+  const [selectedImageForCrop, setSelectedImageForCrop] = useState(null);
   
   // Location state management
   const [countries, setCountries] = useState([]);
@@ -384,28 +387,52 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         return;
       }
       
-      setUploadingImage(true);
+      // Create object URL for cropping
+      const imageUrl = URL.createObjectURL(file);
+      setSelectedImageForCrop(imageUrl);
+      setShowCropper(true);
+    }
+  };
+
+  const handleCropComplete = async (croppedFile) => {
+    setUploadingImage(true);
+    setShowCropper(false);
+    
+    // Clean up the object URL
+    if (selectedImageForCrop) {
+      URL.revokeObjectURL(selectedImageForCrop);
+      setSelectedImageForCrop(null);
+    }
+    
+    try {
+      const uploadedFile = await storage.createFile(
+        ProfilePicBucketId,
+        ID.unique(),
+        croppedFile
+      );
       
-      try {
-        const uploadedFile = await storage.createFile(
-          ProfilePicBucketId,
-          ID.unique(),
-          file
-        );
-        
-        console.log('File uploaded successfully:', uploadedFile);
-        setValue('profilePicFileId', uploadedFile.$id);
-        
-        // Trigger navbar update
-        window.dispatchEvent(new CustomEvent('profileUpdated'));
-        
-      } catch (error) {
-        console.error('File upload failed:', error);
-        alert('Failed to upload profile picture. Please try again.');
-        setValue('profilePicFileId', null);
-      } finally {
-        setUploadingImage(false);
-      }
+      console.log('File uploaded successfully:', uploadedFile);
+      setValue('profilePicFileId', uploadedFile.$id);
+      
+      // Trigger navbar update
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
+      
+    } catch (error) {
+      console.error('File upload failed:', error);
+      alert('Failed to upload profile picture. Please try again.');
+      setValue('profilePicFileId', null);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    
+    // Clean up the object URL
+    if (selectedImageForCrop) {
+      URL.revokeObjectURL(selectedImageForCrop);
+      setSelectedImageForCrop(null);
     }
   };
 
@@ -768,6 +795,15 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           />
         </form>
       </div>
+
+      {/* Image Cropper Modal */}
+      {showCropper && selectedImageForCrop && (
+        <ImageCropper
+          imageSrc={selectedImageForCrop}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }
