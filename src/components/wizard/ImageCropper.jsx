@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import ReactCrop, { centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
+import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { FiCheck, FiX, FiRotateCw } from 'react-icons/fi';
 
@@ -69,35 +69,45 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
       throw new Error('No 2d context');
     }
 
-    // Convert percentage crop to pixel crop based on natural image dimensions
-    const pixelCrop = convertToPixelCrop(
-      completedCrop,
-      image.naturalWidth,
-      image.naturalHeight
-    );
+    // Get the natural (actual) dimensions of the image
+    const naturalWidth = image.naturalWidth;
+    const naturalHeight = image.naturalHeight;
 
-    console.log('Crop data:', {
+    // Convert percentage crop to pixel coordinates manually for accuracy
+    const pixelCrop = {
+      x: Math.round((completedCrop.x / 100) * naturalWidth),
+      y: Math.round((completedCrop.y / 100) * naturalHeight),
+      width: Math.round((completedCrop.width / 100) * naturalWidth),
+      height: Math.round((completedCrop.height / 100) * naturalHeight)
+    };
+
+    console.log('Crop calculation:', {
       completedCrop,
+      naturalDimensions: { width: naturalWidth, height: naturalHeight },
       pixelCrop,
-      naturalWidth: image.naturalWidth,
-      naturalHeight: image.naturalHeight,
-      displayWidth: image.width,
-      displayHeight: image.height
+      displayDimensions: { width: image.width, height: image.height }
     });
 
     // Ensure we have valid crop dimensions
     if (pixelCrop.width <= 0 || pixelCrop.height <= 0) {
-      console.error('Invalid crop dimensions');
+      console.error('Invalid crop dimensions:', pixelCrop);
       return;
     }
+
+    // Clamp crop coordinates to image boundaries
+    pixelCrop.x = Math.max(0, Math.min(pixelCrop.x, naturalWidth - pixelCrop.width));
+    pixelCrop.y = Math.max(0, Math.min(pixelCrop.y, naturalHeight - pixelCrop.height));
+    pixelCrop.width = Math.min(pixelCrop.width, naturalWidth - pixelCrop.x);
+    pixelCrop.height = Math.min(pixelCrop.height, naturalHeight - pixelCrop.y);
 
     // Set canvas size to a fixed output size (400x400 for good quality)
     const outputSize = 400;
     canvas.width = outputSize;
     canvas.height = outputSize;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Clear canvas with white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Save context state
     ctx.save();
@@ -116,15 +126,27 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
       // Draw the cropped portion of the image to fill the entire canvas
       ctx.drawImage(
         image,
-        pixelCrop.x,
-        pixelCrop.y,
-        pixelCrop.width,
-        pixelCrop.height,
-        0,
-        0,
-        outputSize,
-        outputSize
+        pixelCrop.x,      // Source x
+        pixelCrop.y,      // Source y
+        pixelCrop.width,  // Source width
+        pixelCrop.height, // Source height
+        0,                // Destination x
+        0,                // Destination y
+        outputSize,       // Destination width
+        outputSize        // Destination height
       );
+
+      console.log('Successfully drew image to canvas with parameters:', {
+        sourceX: pixelCrop.x,
+        sourceY: pixelCrop.y,
+        sourceWidth: pixelCrop.width,
+        sourceHeight: pixelCrop.height,
+        destX: 0,
+        destY: 0,
+        destWidth: outputSize,
+        destHeight: outputSize
+      });
+
     } catch (error) {
       console.error('Error drawing image to canvas:', error);
       ctx.restore();
@@ -153,7 +175,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
       } else {
         console.error('Failed to create blob from canvas');
       }
-    }, 'image/jpeg', 0.9);
+    }, 'image/jpeg', 0.95); // Increased quality to 0.95
   }, [completedCrop, rotation, onCropComplete, imageLoaded]);
 
   return (
@@ -162,7 +184,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
           <h3 className="text-xl font-bold text-white">Crop Your Profile Picture</h3>
-          <p className="text-blue-100 text-sm mt-1">Adjust the crop area to frame your photo perfectly</p>
+          <p className="text-blue-100 text-sm mt-1">The circular area shows exactly what your final image will look like</p>
         </div>
 
         {/* Cropper Content */}
@@ -210,7 +232,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
               </button>
               
               <div className="text-sm text-gray-600 text-center">
-                Drag to reposition • Resize corners to adjust size • The circular area will be your final image
+                Drag to reposition • Resize corners to adjust size
               </div>
             </div>
 
