@@ -281,8 +281,22 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           console.log('Generating preview URL for file ID:', profilePicFileId);
           console.log('Using bucket ID:', ProfilePicBucketId);
           
-          // Generate the preview URL without transformation
-          const previewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
+          // Use getFilePreview instead of getFileView for better compatibility
+          const previewUrl = storage.getFilePreview(
+            ProfilePicBucketId, 
+            profilePicFileId,
+            400, // width
+            400, // height
+            'center', // gravity
+            100, // quality
+            0, // border width
+            '', // border color
+            0, // border radius
+            1, // opacity
+            0, // rotation
+            '', // background
+            'jpg' // output format
+          );
           
           // Convert URL object to string
           const imageUrl = previewUrl.toString();
@@ -292,8 +306,19 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           setImageLoadError(false);
         } catch (error) {
           console.error('Error generating profile image URL:', error);
-          setProfileImageUrl(null);
-          setImageLoadError(true);
+          
+          // Fallback: try getFileView if getFilePreview fails
+          try {
+            const viewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
+            const imageUrl = viewUrl.toString();
+            console.log('Fallback image URL:', imageUrl);
+            setProfileImageUrl(imageUrl);
+            setImageLoadError(false);
+          } catch (fallbackError) {
+            console.error('Fallback also failed:', fallbackError);
+            setProfileImageUrl(null);
+            setImageLoadError(true);
+          }
         }
       } else {
         console.log('No profilePicFileId or bucket ID available');
@@ -497,8 +522,19 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
   };
 
   const handleImageError = () => {
-    console.log('Image failed to load');
+    console.log('Image failed to load, trying alternative method...');
     setImageLoadError(true);
+    
+    // Try alternative URL generation as fallback
+    if (profilePicFileId && ProfilePicBucketId) {
+      try {
+        const alternativeUrl = `${import.meta.env.VITE_APPWRITE_ENDPOINT}/storage/buckets/${ProfilePicBucketId}/files/${profilePicFileId}/view?project=${import.meta.env.VITE_APPWRITE_PROJECT_ID}`;
+        console.log('Trying alternative URL:', alternativeUrl);
+        setProfileImageUrl(alternativeUrl);
+      } catch (error) {
+        console.error('Alternative URL generation failed:', error);
+      }
+    }
   };
 
   const handleImageLoad = () => {
