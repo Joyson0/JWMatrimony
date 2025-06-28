@@ -86,9 +86,9 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
 
     for (const file of files) {
       // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      const allowedTypes = ['image/jpeg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
-        alert(`${file.name}: Please select a JPG, JPEG, or PNG image file.`);
+        alert(`${file.name}: Please select a JPEG or PNG image file.`);
         continue;
       }
       
@@ -454,12 +454,12 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
                   <FiUpload className="w-8 h-8 text-gray-400 mb-2" />
                   <span className="text-sm text-gray-500 text-center">
                     Upload Photo<br />
-                    <span className="text-xs">JPG, JPEG, PNG (Max 5MB)</span>
+                    <span className="text-xs">JPEG, PNG (Max 5MB)</span>
                   </span>
                   <input
                     type="file"
                     onChange={handleAdditionalPhotoUpload}
-                    accept="image/jpeg,image/jpg,image/png"
+                    accept="image/jpeg,image/png"
                     className="hidden"
                     multiple
                   />
@@ -468,7 +468,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
             </div>
             
             <p className="text-sm text-gray-500">
-              You can upload up to 3 additional photos. Maximum 5MB each. Supported formats: JPG, JPEG, PNG.
+              You can upload up to 3 additional photos. Maximum 5MB each. Supported formats: JPEG, PNG.
             </p>
           </div>
 

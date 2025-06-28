@@ -371,9 +371,9 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
       const file = event.target.files[0];
       
       // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      const allowedTypes = ['image/jpeg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
-        alert('Please select a JPG, JPEG, or PNG image file.');
+        alert('Please select a JPEG or PNG image file.');
         return;
       }
       
@@ -544,14 +544,14 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                 <input
                   type="file"
                   onChange={handleFileChange}
-                  accept="image/jpeg,image/jpg,image/png"
+                  accept="image/jpeg,image/png"
                   className="hidden"
                   disabled={uploadingImage}
                 />
               </label>
             </div>
             <p className="text-sm text-gray-500 mt-2">Click the upload icon to add your photo</p>
-            <p className="text-xs text-gray-400 mt-1">Supported: JPG, JPEG, PNG (Max 5MB)</p>
+            <p className="text-xs text-gray-400 mt-1">Supported: JPEG, PNG (Max 5MB)</p>
             {imageLoadError && (
               <p className="text-xs text-red-500 mt-1">Failed to load image. Please try uploading again.</p>
             )}
