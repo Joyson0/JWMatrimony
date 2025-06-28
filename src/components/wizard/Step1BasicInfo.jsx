@@ -5,6 +5,7 @@ import { basicInfoSchema } from './ValidationSchemas';
 import { storage } from '../../lib/appwrite';
 import { ID } from 'appwrite';
 import WizardNavigation from './WizardNavigation';
+import ImageCropper from '../ImageCropper';
 import { FiUpload, FiUser, FiCalendar, FiMapPin, FiChevronDown, FiAlertCircle } from 'react-icons/fi';
 import { GetCountries, GetState, GetCity } from 'react-country-state-city';
 
@@ -250,6 +251,8 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
 
   const profilePicFileId = watch('profilePicFileId');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showCropper, setShowCropper] = useState(false);
+  const [selectedImageSrc, setSelectedImageSrc] = useState(null);
   
   // Location state management
   const [countries, setCountries] = useState([]);
@@ -333,23 +336,69 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
   const handleFileChange = async (event) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      setUploadingImage(true);
       
-      try {
-        const uploadedFile = await storage.createFile(
-          ProfilePicBucketId,
-          ID.unique(),
-          file
-        );
-        setValue('profilePicFileId', uploadedFile.$id);
-        console.log('File uploaded:', uploadedFile);
-      } catch (error) {
-        console.error('File upload failed:', error);
-        alert('Failed to upload profile picture. Please try again.');
-        setValue('profilePicFileId', null);
-      } finally {
-        setUploadingImage(false);
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a JPG, JPEG, or PNG image file.');
+        return;
       }
+      
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        alert('File size must be less than 5MB.');
+        return;
+      }
+      
+      // Create image URL for cropper
+      const imageUrl = URL.createObjectURL(file);
+      setSelectedImageSrc(imageUrl);
+      setShowCropper(true);
+    }
+  };
+
+  const handleCropComplete = async (croppedImageBlob) => {
+    setUploadingImage(true);
+    setShowCropper(false);
+    
+    try {
+      // Create a File object from the blob
+      const croppedFile = new File([croppedImageBlob], 'profile-pic.jpg', {
+        type: 'image/jpeg',
+      });
+      
+      const uploadedFile = await storage.createFile(
+        ProfilePicBucketId,
+        ID.unique(),
+        croppedFile
+      );
+      
+      setValue('profilePicFileId', uploadedFile.$id);
+      
+      // Trigger navbar update
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
+      
+      console.log('Cropped file uploaded:', uploadedFile);
+    } catch (error) {
+      console.error('File upload failed:', error);
+      alert('Failed to upload profile picture. Please try again.');
+      setValue('profilePicFileId', null);
+    } finally {
+      setUploadingImage(false);
+      // Clean up the object URL
+      if (selectedImageSrc) {
+        URL.revokeObjectURL(selectedImageSrc);
+        setSelectedImageSrc(null);
+      }
+    }
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    if (selectedImageSrc) {
+      URL.revokeObjectURL(selectedImageSrc);
+      setSelectedImageSrc(null);
     }
   };
 
@@ -471,13 +520,14 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                 <input
                   type="file"
                   onChange={handleFileChange}
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png"
                   className="hidden"
                   disabled={uploadingImage}
                 />
               </label>
             </div>
             <p className="text-sm text-gray-500 mt-2">Click the upload icon to add your photo</p>
+            <p className="text-xs text-gray-400 mt-1">Supported: JPG, JPEG, PNG (Max 5MB)</p>
           </div>
 
           {/* Form Grid */}
@@ -691,6 +741,14 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           />
         </form>
       </div>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        imageSrc={selectedImageSrc}
+        onCropComplete={handleCropComplete}
+        onCancel={handleCropCancel}
+        isOpen={showCropper}
+      />
     </div>
   );
 }

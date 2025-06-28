@@ -2,13 +2,12 @@ import * as yup from 'yup';
 
 // Schema for the nested familyDetails object
 const nestedFamilyDetailsSchema = yup.object().shape({
-  fatherOccupation: yup.string().optional(),
-  motherOccupation: yup.string().optional(),
+  fatherName: yup.string().optional(),
+  motherName: yup.string().optional(),
   siblings: yup.array().of(
     yup.object().shape({
       name: yup.string().required('Sibling name is required'),
       relation: yup.string().required('Relation is required'),
-      age: yup.number().nullable().min(0, 'Age cannot be negative').optional(),
     })
   ).optional(), // Can be optional if user has no siblings
 });
@@ -25,6 +24,19 @@ const nestedPartnerPreferencesSchema = yup.object().shape({
   preferredCastes: yup.array().of(yup.string()).optional(),
   preferredStates: yup.array().of(yup.string()).optional(),
   preferredOccupations: yup.array().of(yup.string()).optional(),
+});
+
+// Schema for spiritual status
+const spiritualStatusSchema = yup.object().shape({
+  baptismStatus: yup.string().required('Baptism status is required'),
+  servicePosition: yup.string().optional(),
+  serviceType: yup.string().optional(),
+});
+
+// Schema for languages
+const languageSchema = yup.object().shape({
+  language: yup.string().required('Language is required'),
+  fluency: yup.string().required('Fluency level is required'),
 });
 
 export const basicInfoSchema = yup.object().shape({
@@ -81,6 +93,12 @@ export const aboutSchema = yup.object().shape({
       return false;
     }
   ),
+  // Spiritual status validation
+  spiritualStatus: spiritualStatusSchema.optional(),
+  // Languages validation
+  languages: yup.array().of(languageSchema).optional(),
+  // Additional photos validation
+  additionalPhotos: yup.array().of(yup.string()).max(3, 'Maximum 3 additional photos allowed').optional(),
 });
 
 export const partnerPreferencesSchema = yup.object().shape({

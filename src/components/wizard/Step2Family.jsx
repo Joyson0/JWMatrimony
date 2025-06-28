@@ -3,7 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { familySchema } from './ValidationSchemas';
 import WizardNavigation from './WizardNavigation';
-import { FiUsers, FiPlus, FiTrash2, FiBriefcase } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiTrash2, FiUser } from 'react-icons/fi';
 
 /**
  * Step 2: Family Information Form
@@ -41,45 +41,45 @@ function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, to
           {/* Parents Section */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
-              <FiBriefcase className="w-5 h-5" />
+              <FiUser className="w-5 h-5" />
               Parents' Information
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Father's Occupation */}
+              {/* Father's Name */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Father's Occupation
+                  Father's Name
                 </label>
                 <input
                   type="text"
-                  {...register('familyDetails.fatherOccupation')}
+                  {...register('familyDetails.fatherName')}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="e.g., Engineer, Teacher, Business"
+                  placeholder="Enter father's full name"
                 />
-                {errors.familyDetails?.fatherOccupation && (
+                {errors.familyDetails?.fatherName && (
                   <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
                     <span className="w-4 h-4">⚠️</span>
-                    {errors.familyDetails.fatherOccupation.message}
+                    {errors.familyDetails.fatherName.message}
                   </p>
                 )}
               </div>
 
-              {/* Mother's Occupation */}
+              {/* Mother's Name */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Mother's Occupation
+                  Mother's Name
                 </label>
                 <input
                   type="text"
-                  {...register('familyDetails.motherOccupation')}
+                  {...register('familyDetails.motherName')}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="e.g., Homemaker, Doctor, Artist"
+                  placeholder="Enter mother's full name"
                 />
-                {errors.familyDetails?.motherOccupation && (
+                {errors.familyDetails?.motherName && (
                   <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
                     <span className="w-4 h-4">⚠️</span>
-                    {errors.familyDetails.motherOccupation.message}
+                    {errors.familyDetails.motherName.message}
                   </p>
                 )}
               </div>
@@ -95,7 +95,7 @@ function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, to
               </h3>
               <button
                 type="button"
-                onClick={() => append({ name: '', relation: '', age: '' })}
+                onClick={() => append({ name: '', relation: '' })}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-sm"
               >
                 <FiPlus className="w-4 h-4" />
@@ -109,7 +109,7 @@ function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, to
                 <p className="text-gray-500 mb-4">No siblings added yet</p>
                 <button
                   type="button"
-                  onClick={() => append({ name: '', relation: '', age: '' })}
+                  onClick={() => append({ name: '', relation: '' })}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                 >
                   <FiPlus className="w-4 h-4" />
@@ -132,7 +132,7 @@ function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, to
                       </button>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Name */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -167,26 +167,6 @@ function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, to
                         {errors.familyDetails?.siblings?.[index]?.relation && (
                           <p className="text-red-500 text-sm mt-1">
                             {errors.familyDetails.siblings[index].relation.message}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Age */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Age (Optional)
-                        </label>
-                        <input
-                          type="number"
-                          {...register(`familyDetails.siblings.${index}.age`)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                          placeholder="Age"
-                          min="1"
-                          max="100"
-                        />
-                        {errors.familyDetails?.siblings?.[index]?.age && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.familyDetails.siblings[index].age.message}
                           </p>
                         )}
                       </div>

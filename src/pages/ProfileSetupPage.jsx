@@ -53,6 +53,13 @@ function ProfileSetupPage() {
     education: '', 
     occupation: '', 
     hobbies: [],
+    spiritualStatus: {
+      baptismStatus: 'Baptised Publisher',
+      servicePosition: '',
+      serviceType: ''
+    },
+    languages: [],
+    additionalPhotos: [],
     
     // Complex nested objects
     familyDetails: {},
@@ -116,6 +123,23 @@ function ProfileSetupPage() {
     // Normalize numeric fields
     if (normalized.height) {
       normalized.height = Number(normalized.height);
+    }
+    
+    // Normalize spiritual status
+    if (!normalized.spiritualStatus) {
+      normalized.spiritualStatus = {
+        baptismStatus: 'Baptised Publisher',
+        servicePosition: '',
+        serviceType: ''
+      };
+    }
+    
+    // Normalize arrays
+    if (!Array.isArray(normalized.languages)) {
+      normalized.languages = [];
+    }
+    if (!Array.isArray(normalized.additionalPhotos)) {
+      normalized.additionalPhotos = [];
     }
     
     // Remove validation helper fields that shouldn't be compared
@@ -188,6 +212,23 @@ function ProfileSetupPage() {
           partnerPreferences: typeof existingProfile.partnerPreferences === 'string'
             ? JSON.parse(existingProfile.partnerPreferences) 
             : existingProfile.partnerPreferences || {},
+          spiritualStatus: typeof existingProfile.spiritualStatus === 'string'
+            ? JSON.parse(existingProfile.spiritualStatus)
+            : existingProfile.spiritualStatus || {
+                baptismStatus: 'Baptised Publisher',
+                servicePosition: '',
+                serviceType: ''
+              },
+          languages: Array.isArray(existingProfile.languages)
+            ? existingProfile.languages
+            : typeof existingProfile.languages === 'string'
+              ? JSON.parse(existingProfile.languages)
+              : [],
+          additionalPhotos: Array.isArray(existingProfile.additionalPhotos)
+            ? existingProfile.additionalPhotos
+            : typeof existingProfile.additionalPhotos === 'string'
+              ? JSON.parse(existingProfile.additionalPhotos)
+              : [],
           // Ensure hobbies is always an array
           hobbies: Array.isArray(existingProfile.hobbies) 
             ? existingProfile.hobbies 
@@ -241,6 +282,13 @@ function ProfileSetupPage() {
         // Stringify nested objects for Appwrite storage
         familyDetails: JSON.stringify(dataToSave.familyDetails || {}),
         partnerPreferences: JSON.stringify(dataToSave.partnerPreferences || {}),
+        spiritualStatus: JSON.stringify(dataToSave.spiritualStatus || {
+          baptismStatus: 'Baptised Publisher',
+          servicePosition: '',
+          serviceType: ''
+        }),
+        languages: JSON.stringify(dataToSave.languages || []),
+        additionalPhotos: JSON.stringify(dataToSave.additionalPhotos || []),
       };
 
       let response;
@@ -310,6 +358,11 @@ function ProfileSetupPage() {
           partnerPreferences: stepData.partnerPreferences
             ? { ...formData.partnerPreferences, ...stepData.partnerPreferences }
             : formData.partnerPreferences,
+          spiritualStatus: stepData.spiritualStatus
+            ? { ...formData.spiritualStatus, ...stepData.spiritualStatus }
+            : formData.spiritualStatus,
+          languages: stepData.languages || formData.languages,
+          additionalPhotos: stepData.additionalPhotos || formData.additionalPhotos,
         };
         setFormData(updatedFormData);
       }
@@ -368,6 +421,18 @@ function ProfileSetupPage() {
       
       if (newData.partnerPreferences) {
         updatedData.partnerPreferences = { ...prev.partnerPreferences, ...newData.partnerPreferences };
+      }
+
+      if (newData.spiritualStatus) {
+        updatedData.spiritualStatus = { ...prev.spiritualStatus, ...newData.spiritualStatus };
+      }
+
+      if (newData.languages) {
+        updatedData.languages = newData.languages;
+      }
+
+      if (newData.additionalPhotos) {
+        updatedData.additionalPhotos = newData.additionalPhotos;
       }
       
       return updatedData;
