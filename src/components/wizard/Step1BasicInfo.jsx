@@ -6,7 +6,7 @@ import { storage } from '../../lib/appwrite';
 import { ID } from 'appwrite';
 import WizardNavigation from './WizardNavigation';
 import ImageCropper from './ImageCropper';
-import { FiUpload, FiUser, FiCalendar, FiMapPin, FiChevronDown, FiAlertCircle } from 'react-icons/fi';
+import { FiUpload, FiUser, FiCalendar, FiMapPin, FiChevronDown, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
 import { GetCountries, GetState, GetCity } from 'react-country-state-city';
 import { languages } from '../../data/languages';
 
@@ -252,6 +252,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
 
   const profilePicFileId = watch('profilePicFileId');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [removingImage, setRemovingImage] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState(null);
   const [imageLoadError, setImageLoadError] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
@@ -472,23 +473,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
       }, 500);
       
       // Show success notification
-      const notification = document.createElement('div');
-      notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
-      notification.textContent = 'Profile picture updated successfully! ✓';
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.classList.remove('translate-x-full');
-      }, 100);
-      
-      setTimeout(() => {
-        notification.classList.add('translate-x-full');
-        setTimeout(() => {
-          if (document.body.contains(notification)) {
-            document.body.removeChild(notification);
-          }
-        }, 300);
-      }, 3000);
+      showNotification('Profile picture updated successfully! ✓', 'success');
       
     } catch (error) {
       console.error('File upload failed:', error);
@@ -507,6 +492,99 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
       URL.revokeObjectURL(selectedImageForCrop);
       setSelectedImageForCrop(null);
     }
+  };
+
+  /**
+   * Handle removing the current profile picture
+   */
+  const handleRemoveProfilePicture = async () => {
+    if (!profilePicFileId) return;
+    
+    // Confirm removal
+    if (!confirm('Are you sure you want to remove your profile picture?')) {
+      return;
+    }
+    
+    setRemovingImage(true);
+    
+    try {
+      // Delete from storage
+      await storage.deleteFile(ProfilePicBucketId, profilePicFileId);
+      console.log('Profile picture deleted from storage:', profilePicFileId);
+      
+      // Update form state
+      setValue('profilePicFileId', null);
+      updateFormData({ profilePicFileId: null });
+      
+      // Force image refresh
+      setImageKey(prev => prev + 1);
+      
+      // Update database immediately
+      try {
+        const { db } = await import('../../lib/database');
+        const { account } = await import('../../lib/appwrite');
+        
+        // Get current user
+        const currentUser = await account.get();
+        
+        // Check if user has existing profile
+        const { Query } = await import('appwrite');
+        const response = await db.profiles.list([
+          Query.equal('userId', currentUser.$id)
+        ]);
+        
+        if (response.documents.length > 0) {
+          // Update existing profile to remove image ID
+          const profileDoc = response.documents[0];
+          await db.profiles.update(profileDoc.$id, {
+            profilePicFileId: null
+          });
+          console.log('Database updated - profile picture removed');
+        }
+      } catch (dbError) {
+        console.warn('Could not immediately update database:', dbError);
+      }
+      
+      // Trigger navbar update
+      setTimeout(() => {
+        console.log('Triggering navbar profile update after removal');
+        window.dispatchEvent(new CustomEvent('profileUpdated'));
+      }, 500);
+      
+      // Show success notification
+      showNotification('Profile picture removed successfully', 'success');
+      
+    } catch (error) {
+      console.error('Failed to remove profile picture:', error);
+      alert('Failed to remove profile picture. Please try again.');
+    } finally {
+      setRemovingImage(false);
+    }
+  };
+
+  /**
+   * Show notification message
+   */
+  const showNotification = (message, type = 'success') => {
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-gray-500';
+    
+    const notificationDiv = document.createElement('div');
+    notificationDiv.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+    notificationDiv.textContent = message;
+    document.body.appendChild(notificationDiv);
+    
+    setTimeout(() => {
+      notificationDiv.classList.remove('translate-x-full');
+    }, 100);
+    
+    setTimeout(() => {
+      notificationDiv.classList.add('translate-x-full');
+      setTimeout(() => {
+        if (document.body.contains(notificationDiv)) {
+          document.body.removeChild(notificationDiv);
+        }
+      }, 300);
+    }, 3000);
   };
 
   const handleCountryChange = async (country) => {
@@ -614,7 +692,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           <div className="mb-8 text-center">
             <div className="relative inline-block">
               {profileImageUrl && !imageLoadError ? (
-                <div className="relative">
+                <div className="relative group">
                   <img
                     key={imageKey} // Force re-render when key changes
                     src={profileImageUrl}
@@ -624,15 +702,27 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                     onLoad={handleImageLoad}
                     crossOrigin="anonymous"
                   />
-                  {uploadingImage && (
+                  {(uploadingImage || removingImage) && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent" />
                     </div>
                   )}
+                  
+                  {/* Remove button - appears on hover */}
+                  {!uploadingImage && !removingImage && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveProfilePicture}
+                      className="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 transform hover:scale-110 shadow-lg"
+                      title="Remove profile picture"
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center border-4 border-white shadow-lg">
-                  {uploadingImage ? (
+                  {(uploadingImage || removingImage) ? (
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-400 border-t-transparent" />
                   ) : (
                     <FiUser className="w-12 h-12 text-gray-400" />
@@ -640,22 +730,31 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                 </div>
               )}
               
-              <label className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full cursor-pointer transition-colors shadow-lg">
-                <FiUpload className="w-4 h-4" />
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  disabled={uploadingImage}
-                />
-              </label>
+              {/* Upload button */}
+              {!removingImage && (
+                <label className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full cursor-pointer transition-colors shadow-lg">
+                  <FiUpload className="w-4 h-4" />
+                  <input
+                    type="file"
+                    onChange={handleFileChange}
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    disabled={uploadingImage || removingImage}
+                  />
+                </label>
+              )}
             </div>
-            <p className="text-sm text-gray-500 mt-2">Click the upload icon to add your photo</p>
-            <p className="text-xs text-gray-400 mt-1">Supported: JPEG, PNG, WebP (Max 5MB)</p>
-            {imageLoadError && (
-              <p className="text-xs text-red-500 mt-1">Failed to load image. Please try uploading again.</p>
-            )}
+            
+            <div className="mt-4">
+              <p className="text-sm text-gray-500">Click the upload icon to add your photo</p>
+              <p className="text-xs text-gray-400 mt-1">Supported: JPEG, PNG, WebP (Max 5MB)</p>
+              {profileImageUrl && !uploadingImage && !removingImage && (
+                <p className="text-xs text-gray-500 mt-1">Hover over image to remove</p>
+              )}
+              {imageLoadError && (
+                <p className="text-xs text-red-500 mt-1">Failed to load image. Please try uploading again.</p>
+              )}
+            </div>
           </div>
 
           {/* Form Grid */}
