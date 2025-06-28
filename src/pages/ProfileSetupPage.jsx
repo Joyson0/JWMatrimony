@@ -75,6 +75,52 @@ function ProfileSetupPage() {
   }, [navigate]);
 
   /**
+   * Transform languages from object format to string format for Appwrite
+   * @param {Array} languagesArray - Array of language objects
+   * @returns {Array} Array of language strings
+   */
+  const transformLanguagesToStrings = (languagesArray) => {
+    if (!Array.isArray(languagesArray)) return [];
+    
+    return languagesArray.map(lang => {
+      if (typeof lang === 'string') return lang;
+      if (typeof lang === 'object' && lang.language) {
+        return lang.fluency ? `${lang.language} (${lang.fluency})` : lang.language;
+      }
+      return String(lang);
+    });
+  };
+
+  /**
+   * Transform languages from string format back to object format for form
+   * @param {Array} languagesArray - Array of language strings
+   * @returns {Array} Array of language objects
+   */
+  const transformLanguagesToObjects = (languagesArray) => {
+    if (!Array.isArray(languagesArray)) return [];
+    
+    return languagesArray.map(lang => {
+      if (typeof lang === 'object') return lang;
+      if (typeof lang === 'string') {
+        // Parse "English (Fluent)" format back to object
+        const match = lang.match(/^(.+?)\s*\((.+?)\)$/);
+        if (match) {
+          return {
+            language: match[1].trim(),
+            fluency: match[2].trim()
+          };
+        }
+        // Simple string without fluency info
+        return {
+          language: lang,
+          fluency: ''
+        };
+      }
+      return { language: String(lang), fluency: '' };
+    });
+  };
+
+  /**
    * Deep comparison function to check if objects are equal
    */
   const deepEqual = (obj1, obj2) => {
@@ -229,6 +275,22 @@ function ProfileSetupPage() {
           }
         }
 
+        // Handle languages - transform from strings back to objects for form
+        let languages = [];
+        if (existingProfile.languages) {
+          if (Array.isArray(existingProfile.languages)) {
+            languages = transformLanguagesToObjects(existingProfile.languages);
+          } else if (typeof existingProfile.languages === 'string') {
+            try {
+              const parsedLanguages = JSON.parse(existingProfile.languages);
+              languages = transformLanguagesToObjects(parsedLanguages);
+            } catch (e) {
+              console.warn('Failed to parse languages:', e);
+              languages = [];
+            }
+          }
+        }
+
         // Merge existing data with form structure
         const loadedData = {
           ...baseData,
@@ -242,11 +304,7 @@ function ProfileSetupPage() {
             ? JSON.parse(existingProfile.partnerPreferences) 
             : existingProfile.partnerPreferences || {},
           spiritualStatus: spiritualStatus,
-          languages: Array.isArray(existingProfile.languages)
-            ? existingProfile.languages
-            : typeof existingProfile.languages === 'string'
-              ? JSON.parse(existingProfile.languages)
-              : [],
+          languages: languages,
           additionalPhotos: Array.isArray(existingProfile.additionalPhotos)
             ? existingProfile.additionalPhotos
             : typeof existingProfile.additionalPhotos === 'string'
@@ -302,8 +360,8 @@ function ProfileSetupPage() {
         education: dataToSave.education || '',
         occupation: dataToSave.occupation || '',
         hobbies: Array.isArray(dataToSave.hobbies) ? dataToSave.hobbies : [],
-        // Keep arrays as native JavaScript arrays for Appwrite
-        languages: Array.isArray(dataToSave.languages) ? dataToSave.languages : [],
+        // Transform languages from objects to strings for Appwrite
+        languages: transformLanguagesToStrings(dataToSave.languages || []),
         additionalPhotos: Array.isArray(dataToSave.additionalPhotos) ? dataToSave.additionalPhotos : [],
         // Stringify nested objects for Appwrite storage
         familyDetails: JSON.stringify(dataToSave.familyDetails || {}),
