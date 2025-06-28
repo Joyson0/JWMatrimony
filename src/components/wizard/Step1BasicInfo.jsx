@@ -253,6 +253,8 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
   const [selectedImageSrc, setSelectedImageSrc] = useState(null);
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState(false);
   
   // Location state management
   const [countries, setCountries] = useState([]);
@@ -269,6 +271,24 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
       ...formData,
     });
   }, [formData, reset]);
+
+  // Update profile image URL when profilePicFileId changes
+  useEffect(() => {
+    if (profilePicFileId && ProfilePicBucketId) {
+      try {
+        const imageUrl = storage.getFilePreview(ProfilePicBucketId, profilePicFileId);
+        setProfileImageUrl(imageUrl.href);
+        setImageLoadError(false);
+      } catch (error) {
+        console.error('Error generating profile image URL:', error);
+        setProfileImageUrl(null);
+        setImageLoadError(true);
+      }
+    } else {
+      setProfileImageUrl(null);
+      setImageLoadError(false);
+    }
+  }, [profilePicFileId]);
 
   // Initialize countries on component mount
   useEffect(() => {
@@ -475,6 +495,15 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     onNext(dataToUpdate);
   };
 
+  const handleImageError = () => {
+    setImageLoadError(true);
+    setProfileImageUrl(null);
+  };
+
+  const handleImageLoad = () => {
+    setImageLoadError(false);
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -496,12 +525,14 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           {/* Profile Picture Section */}
           <div className="mb-8 text-center">
             <div className="relative inline-block">
-              {profilePicFileId ? (
+              {profileImageUrl && !imageLoadError ? (
                 <div className="relative">
                   <img
-                    src={storage.getFilePreview(ProfilePicBucketId, profilePicFileId).href}
+                    src={profileImageUrl}
                     alt="Profile Preview"
                     className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+                    onError={handleImageError}
+                    onLoad={handleImageLoad}
                   />
                   {uploadingImage && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
@@ -511,7 +542,11 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                 </div>
               ) : (
                 <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center border-4 border-white shadow-lg">
-                  <FiUser className="w-12 h-12 text-gray-400" />
+                  {uploadingImage ? (
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-400 border-t-transparent" />
+                  ) : (
+                    <FiUser className="w-12 h-12 text-gray-400" />
+                  )}
                 </div>
               )}
               
@@ -528,6 +563,9 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
             </div>
             <p className="text-sm text-gray-500 mt-2">Click the upload icon to add your photo</p>
             <p className="text-xs text-gray-400 mt-1">Supported: JPG, JPEG, PNG (Max 5MB)</p>
+            {imageLoadError && (
+              <p className="text-xs text-red-500 mt-1">Failed to load image. Please try uploading again.</p>
+            )}
           </div>
 
           {/* Form Grid */}
