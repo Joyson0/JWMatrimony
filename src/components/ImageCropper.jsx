@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { FiX, FiCheck, FiRotateCw } from 'react-icons/fi';
@@ -18,8 +18,9 @@ const ImageCropper = ({
   const [crop, setCrop] = useState();
   const [completedCrop, setCompletedCrop] = useState();
   const [rotation, setRotation] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState('');
   const imgRef = useRef(null);
-  const canvasRef = useRef(null);
+  const previewCanvasRef = useRef(null);
 
   // Initialize crop when image loads
   const onImageLoad = useCallback((e) => {
@@ -44,14 +45,77 @@ const ImageCropper = ({
     setCompletedCrop(crop);
   }, []);
 
-  // Generate cropped image
+  // Update preview whenever crop or rotation changes
+  useEffect(() => {
+    if (!completedCrop || !imgRef.current || !previewCanvasRef.current) {
+      return;
+    }
+
+    const updatePreview = async () => {
+      const image = imgRef.current;
+      const canvas = previewCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) return;
+
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+
+      // Set canvas size for preview (128x128 for circular preview)
+      const previewSize = 128;
+      canvas.width = previewSize;
+      canvas.height = previewSize;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Calculate crop dimensions
+      const cropX = completedCrop.x * scaleX;
+      const cropY = completedCrop.y * scaleY;
+      const cropWidth = completedCrop.width * scaleX;
+      const cropHeight = completedCrop.height * scaleY;
+
+      // Apply rotation if any
+      if (rotation !== 0) {
+        ctx.save();
+        ctx.translate(previewSize / 2, previewSize / 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+        ctx.translate(-previewSize / 2, -previewSize / 2);
+      }
+
+      // Draw the cropped image scaled to preview size
+      ctx.drawImage(
+        image,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        previewSize,
+        previewSize
+      );
+
+      if (rotation !== 0) {
+        ctx.restore();
+      }
+
+      // Convert canvas to data URL for preview
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      setPreviewUrl(dataUrl);
+    };
+
+    updatePreview();
+  }, [completedCrop, rotation]);
+
+  // Generate final cropped image
   const getCroppedImg = useCallback(async () => {
-    if (!completedCrop || !imgRef.current || !canvasRef.current) {
+    if (!completedCrop || !imgRef.current) {
       return null;
     }
 
     const image = imgRef.current;
-    const canvas = canvasRef.current;
+    const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
@@ -177,24 +241,17 @@ const ImageCropper = ({
                 <h4 className="font-semibold text-gray-800 mb-3">Preview</h4>
                 <div className="bg-gray-100 rounded-lg p-4 flex items-center justify-center">
                   <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-white">
-                    {completedCrop && (
-                      <canvas
-                        ref={canvasRef}
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Cropped preview"
                         className="w-full h-full object-cover"
-                        style={{ display: 'none' }}
                       />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-400 text-sm">Preview</span>
+                      </div>
                     )}
-                    <img
-                      src={imageSrc}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                      style={{
-                        transform: `rotate(${rotation}deg)`,
-                        clipPath: completedCrop ? 
-                          `inset(${completedCrop.y}% ${100 - completedCrop.x - completedCrop.width}% ${100 - completedCrop.y - completedCrop.height}% ${completedCrop.x}%)` : 
-                          'none'
-                      }}
-                    />
                   </div>
                 </div>
               </div>
@@ -238,6 +295,12 @@ const ImageCropper = ({
             </button>
           </div>
         </div>
+
+        {/* Hidden canvas for preview generation */}
+        <canvas
+          ref={previewCanvasRef}
+          style={{ display: 'none' }}
+        />
       </div>
     </div>
   );
