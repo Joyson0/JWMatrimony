@@ -53,11 +53,11 @@ function ProfileSetupPage() {
     education: '', 
     occupation: '', 
     hobbies: [],
-    spiritualStatus: {
+    spiritualStatus: [{
       baptismStatus: 'Baptised Publisher',
       servicePosition: '',
       serviceType: ''
-    },
+    }],
     languages: [],
     additionalPhotos: [],
     
@@ -125,13 +125,23 @@ function ProfileSetupPage() {
       normalized.height = Number(normalized.height);
     }
     
-    // Normalize spiritual status
-    if (!normalized.spiritualStatus) {
-      normalized.spiritualStatus = {
+    // Normalize spiritual status - ensure it's always an array with one object
+    if (!Array.isArray(normalized.spiritualStatus)) {
+      if (normalized.spiritualStatus && typeof normalized.spiritualStatus === 'object') {
+        normalized.spiritualStatus = [normalized.spiritualStatus];
+      } else {
+        normalized.spiritualStatus = [{
+          baptismStatus: 'Baptised Publisher',
+          servicePosition: '',
+          serviceType: ''
+        }];
+      }
+    } else if (normalized.spiritualStatus.length === 0) {
+      normalized.spiritualStatus = [{
         baptismStatus: 'Baptised Publisher',
         servicePosition: '',
         serviceType: ''
-      };
+      }];
     }
     
     // Normalize arrays
@@ -200,6 +210,30 @@ function ProfileSetupPage() {
           formattedDateOfBirth = new Date(existingProfile.dateOfBirth).toISOString().split('T')[0];
         }
 
+        // Handle spiritual status - ensure it's an array
+        let spiritualStatus = [{
+          baptismStatus: 'Baptised Publisher',
+          servicePosition: '',
+          serviceType: ''
+        }];
+        
+        if (existingProfile.spiritualStatus) {
+          if (Array.isArray(existingProfile.spiritualStatus)) {
+            spiritualStatus = existingProfile.spiritualStatus.length > 0 
+              ? existingProfile.spiritualStatus 
+              : spiritualStatus;
+          } else if (typeof existingProfile.spiritualStatus === 'string') {
+            try {
+              const parsed = JSON.parse(existingProfile.spiritualStatus);
+              spiritualStatus = Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+              console.warn('Failed to parse spiritualStatus:', e);
+            }
+          } else if (typeof existingProfile.spiritualStatus === 'object') {
+            spiritualStatus = [existingProfile.spiritualStatus];
+          }
+        }
+
         // Merge existing data with form structure
         const loadedData = {
           ...baseData,
@@ -212,13 +246,7 @@ function ProfileSetupPage() {
           partnerPreferences: typeof existingProfile.partnerPreferences === 'string'
             ? JSON.parse(existingProfile.partnerPreferences) 
             : existingProfile.partnerPreferences || {},
-          spiritualStatus: typeof existingProfile.spiritualStatus === 'string'
-            ? JSON.parse(existingProfile.spiritualStatus)
-            : existingProfile.spiritualStatus || {
-                baptismStatus: 'Baptised Publisher',
-                servicePosition: '',
-                serviceType: ''
-              },
+          spiritualStatus: spiritualStatus,
           languages: Array.isArray(existingProfile.languages)
             ? existingProfile.languages
             : typeof existingProfile.languages === 'string'
@@ -260,6 +288,20 @@ function ProfileSetupPage() {
    */
   const saveCurrentData = async (dataToSave) => {
     try {
+      // Ensure spiritualStatus is an array for Appwrite
+      let spiritualStatusArray = dataToSave.spiritualStatus;
+      if (!Array.isArray(spiritualStatusArray)) {
+        if (spiritualStatusArray && typeof spiritualStatusArray === 'object') {
+          spiritualStatusArray = [spiritualStatusArray];
+        } else {
+          spiritualStatusArray = [{
+            baptismStatus: 'Baptised Publisher',
+            servicePosition: '',
+            serviceType: ''
+          }];
+        }
+      }
+
       // Prepare data for Appwrite (stringify JSON objects)
       const preparedData = {
         userId: dataToSave.userId,
@@ -282,11 +324,7 @@ function ProfileSetupPage() {
         // Stringify nested objects for Appwrite storage
         familyDetails: JSON.stringify(dataToSave.familyDetails || {}),
         partnerPreferences: JSON.stringify(dataToSave.partnerPreferences || {}),
-        spiritualStatus: JSON.stringify(dataToSave.spiritualStatus || {
-          baptismStatus: 'Baptised Publisher',
-          servicePosition: '',
-          serviceType: ''
-        }),
+        spiritualStatus: JSON.stringify(spiritualStatusArray),
         languages: JSON.stringify(dataToSave.languages || []),
         additionalPhotos: JSON.stringify(dataToSave.additionalPhotos || []),
       };
@@ -358,8 +396,11 @@ function ProfileSetupPage() {
           partnerPreferences: stepData.partnerPreferences
             ? { ...formData.partnerPreferences, ...stepData.partnerPreferences }
             : formData.partnerPreferences,
+          // Handle spiritualStatus - convert object to array if needed
           spiritualStatus: stepData.spiritualStatus
-            ? { ...formData.spiritualStatus, ...stepData.spiritualStatus }
+            ? (Array.isArray(stepData.spiritualStatus) 
+                ? stepData.spiritualStatus 
+                : [stepData.spiritualStatus])
             : formData.spiritualStatus,
           languages: stepData.languages || formData.languages,
           additionalPhotos: stepData.additionalPhotos || formData.additionalPhotos,
@@ -423,8 +464,11 @@ function ProfileSetupPage() {
         updatedData.partnerPreferences = { ...prev.partnerPreferences, ...newData.partnerPreferences };
       }
 
+      // Handle spiritualStatus - convert object to array if needed
       if (newData.spiritualStatus) {
-        updatedData.spiritualStatus = { ...prev.spiritualStatus, ...newData.spiritualStatus };
+        updatedData.spiritualStatus = Array.isArray(newData.spiritualStatus) 
+          ? newData.spiritualStatus 
+          : [newData.spiritualStatus];
       }
 
       if (newData.languages) {

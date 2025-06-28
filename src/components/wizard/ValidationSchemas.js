@@ -26,7 +26,7 @@ const nestedPartnerPreferencesSchema = yup.object().shape({
   preferredOccupations: yup.array().of(yup.string()).optional(),
 });
 
-// Schema for spiritual status
+// Schema for spiritual status object
 const spiritualStatusSchema = yup.object().shape({
   baptismStatus: yup.string().required('Baptism status is required'),
   servicePosition: yup.string().optional(),
@@ -93,8 +93,28 @@ export const aboutSchema = yup.object().shape({
       return false;
     }
   ),
-  // Spiritual status validation
-  spiritualStatus: spiritualStatusSchema.optional(),
+  // Spiritual status validation - now expects an array containing one object
+  spiritualStatus: yup.mixed().optional().test(
+    'spiritual-status-format',
+    'Spiritual status must be a valid format',
+    function(value) {
+      // Allow empty values
+      if (!value) return true;
+      
+      // Allow object (form usage)
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        return spiritualStatusSchema.isValidSync(value);
+      }
+      
+      // Allow array with one object (database format)
+      if (Array.isArray(value) && value.length === 1) {
+        return spiritualStatusSchema.isValidSync(value[0]);
+      }
+      
+      // Reject other formats
+      return false;
+    }
+  ),
   // Languages validation
   languages: yup.array().of(languageSchema).optional(),
   // Additional photos validation
