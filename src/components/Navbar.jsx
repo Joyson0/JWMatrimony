@@ -102,9 +102,12 @@ const Navbar = () => {
         console.log('Using bucket ID:', bucketId);
         
         const viewUrl = storage.getFileView(bucketId, userProfile.profilePicFileId);
-        const imageUrl = viewUrl.toString();
         
-        console.log('Generated navbar profile image URL:', imageUrl);
+        // Add cache-busting parameter to force browser to load fresh image
+        const timestamp = Date.now();
+        const imageUrl = `${viewUrl.toString()}?v=${timestamp}`;
+        
+        console.log('Generated navbar profile image URL with cache-busting:', imageUrl);
         setProfileImageUrl(imageUrl);
         setImageError(false);
       } catch (error) {

@@ -283,9 +283,12 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           
           // Use simple getFileView without any transformations
           const viewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
-          const imageUrl = viewUrl.toString();
           
-          console.log('Generated image URL:', imageUrl);
+          // Add cache-busting parameter to force browser to load fresh image
+          const timestamp = Date.now();
+          const imageUrl = `${viewUrl.toString()}?v=${timestamp}`;
+          
+          console.log('Generated image URL with cache-busting:', imageUrl);
           
           setProfileImageUrl(imageUrl);
           setImageLoadError(false);
@@ -431,9 +434,10 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         }
       }
       
-      // Force immediate update of the profile image URL
+      // Force immediate update of the profile image URL with cache-busting
       const viewUrl = storage.getFileView(ProfilePicBucketId, uploadedFile.$id);
-      const newImageUrl = viewUrl.toString();
+      const timestamp = Date.now();
+      const newImageUrl = `${viewUrl.toString()}?v=${timestamp}`;
       setProfileImageUrl(newImageUrl);
       setImageLoadError(false);
       
