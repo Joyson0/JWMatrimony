@@ -101,13 +101,11 @@ const Navbar = () => {
         console.log('Updating navbar profile image for fileId:', userProfile.profilePicFileId);
         console.log('Using bucket ID:', bucketId);
         
+        // Use simple getFileView without any query parameters
         const viewUrl = storage.getFileView(bucketId, userProfile.profilePicFileId);
+        const imageUrl = viewUrl.toString();
         
-        // Add cache-busting parameter to force browser to load fresh image
-        const timestamp = Date.now();
-        const imageUrl = `${viewUrl.toString()}?v=${timestamp}`;
-        
-        console.log('Generated navbar profile image URL with cache-busting:', imageUrl);
+        console.log('Generated navbar profile image URL:', imageUrl);
         setProfileImageUrl(imageUrl);
         setImageError(false);
       } catch (error) {

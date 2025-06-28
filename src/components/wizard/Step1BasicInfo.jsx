@@ -256,6 +256,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
   const [imageLoadError, setImageLoadError] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
   const [selectedImageForCrop, setSelectedImageForCrop] = useState(null);
+  const [imageKey, setImageKey] = useState(0); // Force re-render of image
   
   // Location state management
   const [countries, setCountries] = useState([]);
@@ -281,14 +282,11 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           console.log('Generating image URL for file ID:', profilePicFileId);
           console.log('Using bucket ID:', ProfilePicBucketId);
           
-          // Use simple getFileView without any transformations
+          // Use simple getFileView without any query parameters
           const viewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
+          const imageUrl = viewUrl.toString();
           
-          // Add cache-busting parameter to force browser to load fresh image
-          const timestamp = Date.now();
-          const imageUrl = `${viewUrl.toString()}?v=${timestamp}`;
-          
-          console.log('Generated image URL with cache-busting:', imageUrl);
+          console.log('Generated image URL:', imageUrl);
           
           setProfileImageUrl(imageUrl);
           setImageLoadError(false);
@@ -307,7 +305,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     };
 
     updateProfileImageUrl();
-  }, [profilePicFileId]);
+  }, [profilePicFileId, imageKey]); // Include imageKey to force refresh
 
   // Initialize countries on component mount
   useEffect(() => {
@@ -434,12 +432,8 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         }
       }
       
-      // Force immediate update of the profile image URL with cache-busting
-      const viewUrl = storage.getFileView(ProfilePicBucketId, uploadedFile.$id);
-      const timestamp = Date.now();
-      const newImageUrl = `${viewUrl.toString()}?v=${timestamp}`;
-      setProfileImageUrl(newImageUrl);
-      setImageLoadError(false);
+      // Force image refresh by incrementing the key
+      setImageKey(prev => prev + 1);
       
       // Trigger immediate navbar update with a slight delay to ensure database is updated
       setTimeout(() => {
@@ -592,6 +586,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
               {profileImageUrl && !imageLoadError ? (
                 <div className="relative">
                   <img
+                    key={imageKey} // Force re-render when key changes
                     src={profileImageUrl}
                     alt="Profile Preview"
                     className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
