@@ -93,14 +93,6 @@ function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, to
                 <FiUsers className="w-5 h-5" />
                 Siblings Information
               </h3>
-              <button
-                type="button"
-                onClick={() => append({ name: '', relation: '' })}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-sm"
-              >
-                <FiPlus className="w-4 h-4" />
-                Add Sibling
-              </button>
             </div>
 
             {fields.length === 0 ? (
@@ -173,6 +165,18 @@ function Step2Family({ formData, updateFormData, onNext, onBack, currentStep, to
                     </div>
                   </div>
                 ))}
+                
+                {/* Add Sibling Button - Positioned after the input fields */}
+                <div className="flex justify-center pt-4">
+                  <button
+                    type="button"
+                    onClick={() => append({ name: '', relation: '' })}
+                    className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-sm"
+                  >
+                    <FiPlus className="w-4 h-4" />
+                    Add Another Sibling
+                  </button>
+                </div>
               </div>
             )}
           </div>

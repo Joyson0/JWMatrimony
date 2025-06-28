@@ -6,6 +6,7 @@ import WizardNavigation from './WizardNavigation';
 import { storage } from '../../lib/appwrite';
 import { ID } from 'appwrite';
 import { FiUser, FiBook, FiBriefcase, FiHeart, FiGlobe, FiPlus, FiTrash2, FiUpload, FiX, FiStar } from 'react-icons/fi';
+import { languages } from '../../data/languages';
 
 const AdditionalPhotosBucketId = import.meta.env.VITE_BUCKET_ID;
 
@@ -44,18 +45,6 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
   const hobbiesText = watch('hobbies', '');
   const gender = watch('gender') || formData.gender;
   const additionalPhotos = watch('additionalPhotos', []);
-
-  // Language options
-  const languageOptions = [
-    'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Russian',
-    'Chinese (Mandarin)', 'Japanese', 'Korean', 'Arabic', 'Hindi', 'Bengali',
-    'Urdu', 'Tamil', 'Telugu', 'Marathi', 'Gujarati', 'Punjabi', 'Malayalam',
-    'Kannada', 'Oriya', 'Assamese', 'Nepali', 'Sinhala', 'Thai', 'Vietnamese',
-    'Indonesian', 'Malay', 'Filipino', 'Dutch', 'Swedish', 'Norwegian', 'Danish',
-    'Finnish', 'Polish', 'Czech', 'Hungarian', 'Romanian', 'Bulgarian', 'Croatian',
-    'Serbian', 'Slovak', 'Slovenian', 'Estonian', 'Latvian', 'Lithuanian', 'Greek',
-    'Turkish', 'Hebrew', 'Persian', 'Swahili', 'Amharic', 'Yoruba', 'Igbo', 'Hausa'
-  ].sort();
 
   const fluencyLevels = ['Native', 'Fluent', 'Intermediate', 'Beginner'];
 
@@ -311,14 +300,6 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
                 <FiGlobe className="w-5 h-5" />
                 Languages Known
               </h3>
-              <button
-                type="button"
-                onClick={() => appendLanguage({ language: '', fluency: '' })}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors shadow-sm"
-              >
-                <FiPlus className="w-4 h-4" />
-                Add Language
-              </button>
             </div>
 
             {languageFields.length === 0 ? (
@@ -361,7 +342,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                         >
                           <option value="">Select language</option>
-                          {languageOptions.map(lang => (
+                          {languages.map(lang => (
                             <option key={lang} value={lang}>{lang}</option>
                           ))}
                         </select>
@@ -395,6 +376,18 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
                     </div>
                   </div>
                 ))}
+                
+                {/* Add Language Button - Positioned after the input fields */}
+                <div className="flex justify-center pt-4">
+                  <button
+                    type="button"
+                    onClick={() => appendLanguage({ language: '', fluency: '' })}
+                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors shadow-sm"
+                  >
+                    <FiPlus className="w-4 h-4" />
+                    Add Another Language
+                  </button>
+                </div>
               </div>
             )}
           </div>

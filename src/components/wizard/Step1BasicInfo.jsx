@@ -8,6 +8,7 @@ import WizardNavigation from './WizardNavigation';
 import ImageCropper from './ImageCropper';
 import { FiUpload, FiUser, FiCalendar, FiMapPin, FiChevronDown, FiAlertCircle } from 'react-icons/fi';
 import { GetCountries, GetState, GetCity } from 'react-country-state-city';
+import { languages } from '../../data/languages';
 
 const ProfilePicBucketId = import.meta.env.VITE_BUCKET_ID;
 
@@ -691,12 +692,15 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Mother Tongue *
               </label>
-              <input
-                type="text"
+              <select
                 {...register('motherTongue')}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                placeholder="e.g., English, Hindi, Spanish"
-              />
+              >
+                <option value="">Select Mother Tongue</option>
+                {languages.map(language => (
+                  <option key={language} value={language}>{language}</option>
+                ))}
+              </select>
               {errors.motherTongue && (
                 <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
                   <span className="w-4 h-4">⚠️</span>
