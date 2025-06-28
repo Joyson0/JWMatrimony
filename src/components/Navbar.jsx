@@ -69,7 +69,14 @@ const Navbar = () => {
         Query.equal('userId', userId)
       ]);
       
-      setUserProfile(profileResponse.documents.length > 0 ? profileResponse.documents[0] : null);
+      if (profileResponse.documents.length > 0) {
+        const profile = profileResponse.documents[0];
+        console.log('Fetched user profile:', profile);
+        setUserProfile(profile);
+      } else {
+        console.log('No profile found for user');
+        setUserProfile(null);
+      }
     } catch (profileError) {
       console.log('No profile found or error fetching profile:', profileError);
       setUserProfile(null);
@@ -99,9 +106,16 @@ const Navbar = () => {
     if (userProfile?.profilePicFileId) {
       try {
         const bucketId = import.meta.env.VITE_BUCKET_ID;
-        return storage.getFilePreview(bucketId, userProfile.profilePicFileId).href;
+        console.log('Getting profile image URL for fileId:', userProfile.profilePicFileId);
+        console.log('Using bucket ID:', bucketId);
+        
+        const viewUrl = storage.getFileView(bucketId, userProfile.profilePicFileId);
+        const imageUrl = viewUrl.toString();
+        
+        console.log('Generated navbar profile image URL:', imageUrl);
+        return imageUrl;
       } catch (error) {
-        console.error('Error getting profile image:', error);
+        console.error('Error getting profile image URL:', error);
         return null;
       }
     }
@@ -113,16 +127,25 @@ const Navbar = () => {
    */
   const ProfileImage = () => {
     const imageUrl = getProfileImageUrl();
+    const [imageError, setImageError] = useState(false);
     
-    if (imageUrl) {
+    // Reset image error when imageUrl changes
+    useEffect(() => {
+      setImageError(false);
+    }, [imageUrl]);
+    
+    if (imageUrl && !imageError) {
       return (
         <img
           src={imageUrl}
           alt="Profile"
           className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm"
           onError={(e) => {
-            e.target.style.display = 'none';
-            e.target.nextSibling.style.display = 'flex';
+            console.log('Profile image failed to load in navbar:', imageUrl);
+            setImageError(true);
+          }}
+          onLoad={() => {
+            console.log('Profile image loaded successfully in navbar');
           }}
         />
       );
