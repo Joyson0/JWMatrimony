@@ -283,6 +283,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           
           // Use simple getFileView without any transformations
           const viewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
+          console.log('view url: ', viewUrl)
           const imageUrl = viewUrl.toString();
           
           console.log('Generated image URL:', imageUrl);
