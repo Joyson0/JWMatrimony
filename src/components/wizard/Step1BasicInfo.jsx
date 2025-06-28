@@ -421,6 +421,9 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
       // Update the form with the new file ID immediately
       setValue('profilePicFileId', uploadedFile.$id);
       
+      // Update the parent component's form data immediately
+      updateFormData({ profilePicFileId: uploadedFile.$id });
+      
       // Delete the previous image if it exists
       if (previousFileId) {
         try {
@@ -434,6 +437,33 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
       
       // Force image refresh by incrementing the key
       setImageKey(prev => prev + 1);
+      
+      // Immediately save to database if we have a user profile document ID
+      try {
+        const { db } = await import('../../lib/database');
+        const { account } = await import('../../lib/appwrite');
+        
+        // Get current user
+        const currentUser = await account.get();
+        
+        // Check if user has existing profile
+        const { Query } = await import('appwrite');
+        const response = await db.profiles.list([
+          Query.equal('userId', currentUser.$id)
+        ]);
+        
+        if (response.documents.length > 0) {
+          // Update existing profile with new image ID
+          const profileDoc = response.documents[0];
+          await db.profiles.update(profileDoc.$id, {
+            profilePicFileId: uploadedFile.$id
+          });
+          console.log('Database updated with new profile picture ID');
+        }
+      } catch (dbError) {
+        console.warn('Could not immediately update database:', dbError);
+        // Don't throw error as the upload was successful
+      }
       
       // Trigger immediate navbar update with a slight delay to ensure database is updated
       setTimeout(() => {
