@@ -10,6 +10,8 @@ const Navbar = () => {
   const [loading, setLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
+  const [imageError, setImageError] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,6 +24,7 @@ const Navbar = () => {
   // Listen for profile updates and location changes
   useEffect(() => {
     const handleProfileUpdate = () => {
+      console.log('Profile update event received in navbar');
       if (user) {
         fetchUserProfile(user.$id);
       }
@@ -39,6 +42,11 @@ const Navbar = () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, [user, location.pathname]);
+
+  // Update profile image URL when userProfile changes
+  useEffect(() => {
+    updateProfileImageUrl();
+  }, [userProfile]);
 
   /**
    * Check if user is authenticated and fetch their data
@@ -71,7 +79,7 @@ const Navbar = () => {
       
       if (profileResponse.documents.length > 0) {
         const profile = profileResponse.documents[0];
-        console.log('Fetched user profile:', profile);
+        console.log('Fetched user profile in navbar:', profile);
         setUserProfile(profile);
       } else {
         console.log('No profile found for user');
@@ -84,6 +92,34 @@ const Navbar = () => {
   };
 
   /**
+   * Update profile image URL when profile changes
+   */
+  const updateProfileImageUrl = async () => {
+    if (userProfile?.profilePicFileId) {
+      try {
+        const bucketId = import.meta.env.VITE_BUCKET_ID;
+        console.log('Updating navbar profile image for fileId:', userProfile.profilePicFileId);
+        console.log('Using bucket ID:', bucketId);
+        
+        const viewUrl = storage.getFileView(bucketId, userProfile.profilePicFileId);
+        const imageUrl = viewUrl.toString();
+        
+        console.log('Generated navbar profile image URL:', imageUrl);
+        setProfileImageUrl(imageUrl);
+        setImageError(false);
+      } catch (error) {
+        console.error('Error getting profile image URL:', error);
+        setProfileImageUrl(null);
+        setImageError(true);
+      }
+    } else {
+      console.log('No profilePicFileId available');
+      setProfileImageUrl(null);
+      setImageError(false);
+    }
+  };
+
+  /**
    * Handle user logout
    */
   const handleLogout = async () => {
@@ -91,6 +127,7 @@ const Navbar = () => {
       await account.deleteSession('current');
       setUser(null);
       setUserProfile(null);
+      setProfileImageUrl(null);
       setDropdownOpen(false);
       navigate('/');
     } catch (error) {
@@ -99,49 +136,17 @@ const Navbar = () => {
   };
 
   /**
-   * Get profile image URL from storage
-   * @returns {string|null} Profile image URL or null
-   */
-  const getProfileImageUrl = () => {
-    if (userProfile?.profilePicFileId) {
-      try {
-        const bucketId = import.meta.env.VITE_BUCKET_ID;
-        console.log('Getting profile image URL for fileId:', userProfile.profilePicFileId);
-        console.log('Using bucket ID:', bucketId);
-        
-        const viewUrl = storage.getFileView(bucketId, userProfile.profilePicFileId);
-        const imageUrl = viewUrl.toString();
-        
-        console.log('Generated navbar profile image URL:', imageUrl);
-        return imageUrl;
-      } catch (error) {
-        console.error('Error getting profile image URL:', error);
-        return null;
-      }
-    }
-    return null;
-  };
-
-  /**
    * Profile image component with fallback to initials
    */
   const ProfileImage = () => {
-    const imageUrl = getProfileImageUrl();
-    const [imageError, setImageError] = useState(false);
-    
-    // Reset image error when imageUrl changes
-    useEffect(() => {
-      setImageError(false);
-    }, [imageUrl]);
-    
-    if (imageUrl && !imageError) {
+    if (profileImageUrl && !imageError) {
       return (
         <img
-          src={imageUrl}
+          src={profileImageUrl}
           alt="Profile"
           className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm"
           onError={(e) => {
-            console.log('Profile image failed to load in navbar:', imageUrl);
+            console.log('Profile image failed to load in navbar:', profileImageUrl);
             setImageError(true);
           }}
           onLoad={() => {

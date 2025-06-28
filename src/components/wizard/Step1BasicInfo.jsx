@@ -283,7 +283,6 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
           
           // Use simple getFileView without any transformations
           const viewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
-          console.log('view url: ', viewUrl)
           const imageUrl = viewUrl.toString();
           
           console.log('Generated image URL:', imageUrl);
@@ -418,7 +417,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
       
       console.log('New profile picture uploaded successfully:', uploadedFile);
       
-      // Update the form with the new file ID
+      // Update the form with the new file ID immediately
       setValue('profilePicFileId', uploadedFile.$id);
       
       // Delete the previous image if it exists
@@ -432,8 +431,17 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         }
       }
       
-      // Trigger immediate navbar update
-      window.dispatchEvent(new CustomEvent('profileUpdated'));
+      // Force immediate update of the profile image URL
+      const viewUrl = storage.getFileView(ProfilePicBucketId, uploadedFile.$id);
+      const newImageUrl = viewUrl.toString();
+      setProfileImageUrl(newImageUrl);
+      setImageLoadError(false);
+      
+      // Trigger immediate navbar update with a slight delay to ensure database is updated
+      setTimeout(() => {
+        console.log('Triggering navbar profile update');
+        window.dispatchEvent(new CustomEvent('profileUpdated'));
+      }, 500);
       
       // Show success notification
       const notification = document.createElement('div');
