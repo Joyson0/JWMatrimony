@@ -278,9 +278,10 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
       if (profilePicFileId && ProfilePicBucketId) {
         try {
           console.log('Generating preview URL for file ID:', profilePicFileId);
+          console.log('Using bucket ID:', ProfilePicBucketId);
           
-          // Generate the preview URL
-          const previewResult = storage.getFilePreview(
+          // Generate the preview URL - this returns a URL object, not a string
+          const previewUrl = storage.getFilePreview(
             ProfilePicBucketId, 
             profilePicFileId,
             200, // width
@@ -289,7 +290,8 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
             100 // quality
           );
           
-          const imageUrl = previewResult.href;
+          // Convert URL object to string
+          const imageUrl = previewUrl.toString();
           console.log('Generated image URL:', imageUrl);
           
           setProfileImageUrl(imageUrl);
@@ -301,6 +303,8 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         }
       } else {
         console.log('No profilePicFileId or bucket ID available');
+        console.log('profilePicFileId:', profilePicFileId);
+        console.log('ProfilePicBucketId:', ProfilePicBucketId);
         setProfileImageUrl(null);
         setImageLoadError(false);
       }
