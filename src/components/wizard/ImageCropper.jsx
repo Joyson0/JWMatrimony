@@ -18,7 +18,6 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
   const [rotation, setRotation] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef(null);
-  const canvasRef = useRef(null);
 
   /**
    * Initialize crop when image loads
@@ -57,20 +56,20 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
    * Generate cropped image and call completion callback
    */
   const handleCropComplete = useCallback(async () => {
-    if (!completedCrop || !imgRef.current || !canvasRef.current || !imageLoaded) {
+    if (!completedCrop || !imgRef.current || !imageLoaded) {
       console.error('Missing required elements for cropping');
       return;
     }
 
     const image = imgRef.current;
-    const canvas = canvasRef.current;
+    const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
       throw new Error('No 2d context');
     }
 
-    // Convert percentage crop to pixel crop
+    // Convert percentage crop to pixel crop based on natural image dimensions
     const pixelCrop = convertToPixelCrop(
       completedCrop,
       image.naturalWidth,
@@ -92,8 +91,8 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
       return;
     }
 
-    // Set canvas size to the crop size
-    const outputSize = Math.min(pixelCrop.width, pixelCrop.height);
+    // Set canvas size to a fixed output size (400x400 for good quality)
+    const outputSize = 400;
     canvas.width = outputSize;
     canvas.height = outputSize;
 
@@ -103,7 +102,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
     // Save context state
     ctx.save();
 
-    // Handle rotation
+    // Handle rotation if needed
     if (rotation !== 0) {
       // Move to center of canvas
       ctx.translate(canvas.width / 2, canvas.height / 2);
@@ -114,7 +113,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
     }
 
     try {
-      // Draw the cropped portion of the image
+      // Draw the cropped portion of the image to fill the entire canvas
       ctx.drawImage(
         image,
         pixelCrop.x,
@@ -199,23 +198,6 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
               </ReactCrop>
             </div>
 
-            {/* Crop Preview */}
-            {completedCrop && imageLoaded && (
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-2 text-center">Preview:</p>
-                <div className="w-24 h-24 border-2 border-gray-300 rounded-full overflow-hidden bg-gray-100">
-                  <canvas
-                    ref={canvasRef}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
             {/* Controls */}
             <div className="flex items-center gap-4 mb-6">
               <button
@@ -228,7 +210,7 @@ function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
               </button>
               
               <div className="text-sm text-gray-600 text-center">
-                Drag to reposition • Resize corners to adjust size
+                Drag to reposition • Resize corners to adjust size • The circular area will be your final image
               </div>
             </div>
 
