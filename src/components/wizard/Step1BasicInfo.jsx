@@ -256,6 +256,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
   const [imageLoadError, setImageLoadError] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
   const [selectedImageForCrop, setSelectedImageForCrop] = useState(null);
+  const [imageRetryCount, setImageRetryCount] = useState(0);
   
   // Location state management
   const [countries, setCountries] = useState([]);
@@ -278,36 +279,22 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     const updateProfileImageUrl = async () => {
       if (profilePicFileId && ProfilePicBucketId) {
         try {
-          console.log('Generating preview URL for file ID:', profilePicFileId);
+          console.log('Generating image URL for file ID:', profilePicFileId);
           console.log('Using bucket ID:', ProfilePicBucketId);
           
-          // Use getFilePreview instead of getFileView for better compatibility
-          const previewUrl = storage.getFilePreview(
-            ProfilePicBucketId, 
-            profilePicFileId
-          );
+          // Use simple getFileView without any transformations
+          const viewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
+          const imageUrl = viewUrl.toString();
           
-          // Convert URL object to string
-          const imageUrl = previewUrl.toString();
           console.log('Generated image URL:', imageUrl);
           
           setProfileImageUrl(imageUrl);
           setImageLoadError(false);
+          setImageRetryCount(0);
         } catch (error) {
           console.error('Error generating profile image URL:', error);
-          
-          // Fallback: try getFileView if getFilePreview fails
-          try {
-            const viewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
-            const imageUrl = viewUrl.toString();
-            console.log('Fallback image URL:', imageUrl);
-            setProfileImageUrl(imageUrl);
-            setImageLoadError(false);
-          } catch (fallbackError) {
-            console.error('Fallback also failed:', fallbackError);
-            setProfileImageUrl(null);
-            setImageLoadError(true);
-          }
+          setProfileImageUrl(null);
+          setImageLoadError(true);
         }
       } else {
         console.log('No profilePicFileId or bucket ID available');
@@ -511,24 +498,28 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
   };
 
   const handleImageError = () => {
-    console.log('Image failed to load, trying alternative method...');
+    console.log('Image failed to load, retry count:', imageRetryCount);
     setImageLoadError(true);
     
-    // Try alternative URL generation as fallback
-    if (profilePicFileId && ProfilePicBucketId) {
-      try {
-        const alternativeUrl = `${import.meta.env.VITE_APPWRITE_ENDPOINT}/storage/buckets/${ProfilePicBucketId}/files/${profilePicFileId}/view?project=${import.meta.env.VITE_APPWRITE_PROJECT_ID}`;
-        console.log('Trying alternative URL:', alternativeUrl);
-        setProfileImageUrl(alternativeUrl);
-      } catch (error) {
-        console.error('Alternative URL generation failed:', error);
-      }
+    // Try to reload the image with a slight delay (helps with timing issues)
+    if (imageRetryCount < 2 && profilePicFileId && ProfilePicBucketId) {
+      setTimeout(() => {
+        setImageRetryCount(prev => prev + 1);
+        setImageLoadError(false);
+        
+        // Force a new URL with timestamp to bypass cache
+        const viewUrl = storage.getFileView(ProfilePicBucketId, profilePicFileId);
+        const imageUrl = viewUrl.toString() + '?t=' + Date.now();
+        console.log('Retrying with URL:', imageUrl);
+        setProfileImageUrl(imageUrl);
+      }, 1000);
     }
   };
 
   const handleImageLoad = () => {
     console.log('Image loaded successfully');
     setImageLoadError(false);
+    setImageRetryCount(0);
   };
 
   const onSubmit = (dataFromForm) => {
@@ -605,8 +596,10 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
             </div>
             <p className="text-sm text-gray-500 mt-2">Click the upload icon to add your photo</p>
             <p className="text-xs text-gray-400 mt-1">Supported: JPEG, PNG, WebP (Max 5MB)</p>
-            {imageLoadError && (
-              <p className="text-xs text-red-500 mt-1">Failed to load image. Please try uploading again.</p>
+            {imageLoadError && imageRetryCount >= 2 && (
+              <p className="text-xs text-red-500 mt-1">
+                Image loading failed. The image was uploaded successfully but may take a moment to appear.
+              </p>
             )}
           </div>
 
