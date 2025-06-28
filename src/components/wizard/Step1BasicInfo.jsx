@@ -274,20 +274,39 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
 
   // Update profile image URL when profilePicFileId changes
   useEffect(() => {
-    if (profilePicFileId && ProfilePicBucketId) {
-      try {
-        const imageUrl = storage.getFilePreview(ProfilePicBucketId, profilePicFileId);
-        setProfileImageUrl(imageUrl.href);
-        setImageLoadError(false);
-      } catch (error) {
-        console.error('Error generating profile image URL:', error);
+    const updateProfileImageUrl = async () => {
+      if (profilePicFileId && ProfilePicBucketId) {
+        try {
+          console.log('Generating preview URL for file ID:', profilePicFileId);
+          
+          // Generate the preview URL
+          const previewResult = storage.getFilePreview(
+            ProfilePicBucketId, 
+            profilePicFileId,
+            200, // width
+            200, // height
+            'center', // gravity
+            100 // quality
+          );
+          
+          const imageUrl = previewResult.href;
+          console.log('Generated image URL:', imageUrl);
+          
+          setProfileImageUrl(imageUrl);
+          setImageLoadError(false);
+        } catch (error) {
+          console.error('Error generating profile image URL:', error);
+          setProfileImageUrl(null);
+          setImageLoadError(true);
+        }
+      } else {
+        console.log('No profilePicFileId or bucket ID available');
         setProfileImageUrl(null);
-        setImageLoadError(true);
+        setImageLoadError(false);
       }
-    } else {
-      setProfileImageUrl(null);
-      setImageLoadError(false);
-    }
+    };
+
+    updateProfileImageUrl();
   }, [profilePicFileId]);
 
   // Initialize countries on component mount
@@ -394,12 +413,12 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
         croppedFile
       );
       
+      console.log('File uploaded successfully:', uploadedFile);
       setValue('profilePicFileId', uploadedFile.$id);
       
       // Trigger navbar update
       window.dispatchEvent(new CustomEvent('profileUpdated'));
       
-      console.log('Cropped file uploaded:', uploadedFile);
     } catch (error) {
       console.error('File upload failed:', error);
       alert('Failed to upload profile picture. Please try again.');
@@ -481,6 +500,16 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     trigger('districtValid');
   };
 
+  const handleImageError = () => {
+    console.log('Image failed to load');
+    setImageLoadError(true);
+  };
+
+  const handleImageLoad = () => {
+    console.log('Image loaded successfully');
+    setImageLoadError(false);
+  };
+
   const onSubmit = (dataFromForm) => {
     // Remove validation helper fields before submitting
     const { countryValid, stateValid, districtValid, ...cleanData } = dataFromForm;
@@ -493,15 +522,6 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
     
     // Call onNext with the data to save
     onNext(dataToUpdate);
-  };
-
-  const handleImageError = () => {
-    setImageLoadError(true);
-    setProfileImageUrl(null);
-  };
-
-  const handleImageLoad = () => {
-    setImageLoadError(false);
   };
 
   return (
@@ -533,6 +553,7 @@ function Step1BasicInfo({ formData, updateFormData, onNext, currentStep, totalSt
                     className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
                     onError={handleImageError}
                     onLoad={handleImageLoad}
+                    crossOrigin="anonymous"
                   />
                   {uploadingImage && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
