@@ -145,7 +145,7 @@ function Step4PartnerPreferences({ formData, updateFormData, onBack, onSubmit, c
             </h3>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {['Never Married', 'Divorced', 'Widowed', 'Annulled'].map(status => (
+              {['Never Married', 'Divorced', 'Widowed'].map(status => (
                 <label key={status} className="flex items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                   <input
                     type="checkbox"
