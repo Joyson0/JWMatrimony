@@ -75,46 +75,51 @@ function ProfileSetupPage() {
   }, [navigate]);
 
   /**
-   * Transform languages from object format to string format for Appwrite
+   * Transform languages from object format to stringified JSON format for Appwrite
    * @param {Array} languagesArray - Array of language objects
-   * @returns {Array} Array of language strings
+   * @returns {Array} Array of stringified JSON language objects
    */
-  const transformLanguagesToStrings = (languagesArray) => {
+  const transformLanguagesToStringifiedJSON = (languagesArray) => {
     if (!Array.isArray(languagesArray)) return [];
     
     return languagesArray.map(lang => {
-      if (typeof lang === 'string') return lang;
-      if (typeof lang === 'object' && lang.language) {
-        return lang.fluency ? `${lang.language} (${lang.fluency})` : lang.language;
+      if (typeof lang === 'string') {
+        // If it's already a string, try to parse it first
+        try {
+          const parsed = JSON.parse(lang);
+          return JSON.stringify(parsed);
+        } catch (e) {
+          // If parsing fails, treat as a simple language string and convert to object
+          return JSON.stringify({ language: lang, fluency: '' });
+        }
       }
-      return String(lang);
+      if (typeof lang === 'object' && lang !== null) {
+        return JSON.stringify(lang);
+      }
+      return JSON.stringify({ language: String(lang), fluency: '' });
     });
   };
 
   /**
-   * Transform languages from string format back to object format for form
-   * @param {Array} languagesArray - Array of language strings
+   * Transform languages from stringified JSON format back to object format for form
+   * @param {Array} languagesArray - Array of stringified JSON language objects
    * @returns {Array} Array of language objects
    */
-  const transformLanguagesToObjects = (languagesArray) => {
+  const transformLanguagesFromStringifiedJSON = (languagesArray) => {
     if (!Array.isArray(languagesArray)) return [];
     
     return languagesArray.map(lang => {
-      if (typeof lang === 'object') return lang;
+      if (typeof lang === 'object' && lang !== null) return lang;
       if (typeof lang === 'string') {
-        // Parse "English (Fluent)" format back to object
-        const match = lang.match(/^(.+?)\s*\((.+?)\)$/);
-        if (match) {
+        try {
+          return JSON.parse(lang);
+        } catch (e) {
+          // If parsing fails, treat as simple string
           return {
-            language: match[1].trim(),
-            fluency: match[2].trim()
+            language: lang,
+            fluency: ''
           };
         }
-        // Simple string without fluency info
-        return {
-          language: lang,
-          fluency: ''
-        };
       }
       return { language: String(lang), fluency: '' };
     });
@@ -275,15 +280,15 @@ function ProfileSetupPage() {
           }
         }
 
-        // Handle languages - transform from strings back to objects for form
+        // Handle languages - transform from stringified JSON back to objects for form
         let languages = [];
         if (existingProfile.languages) {
           if (Array.isArray(existingProfile.languages)) {
-            languages = transformLanguagesToObjects(existingProfile.languages);
+            languages = transformLanguagesFromStringifiedJSON(existingProfile.languages);
           } else if (typeof existingProfile.languages === 'string') {
             try {
               const parsedLanguages = JSON.parse(existingProfile.languages);
-              languages = transformLanguagesToObjects(parsedLanguages);
+              languages = transformLanguagesFromStringifiedJSON(parsedLanguages);
             } catch (e) {
               console.warn('Failed to parse languages:', e);
               languages = [];
@@ -360,8 +365,8 @@ function ProfileSetupPage() {
         education: dataToSave.education || '',
         occupation: dataToSave.occupation || '',
         hobbies: Array.isArray(dataToSave.hobbies) ? dataToSave.hobbies : [],
-        // Transform languages from objects to strings for Appwrite
-        languages: transformLanguagesToStrings(dataToSave.languages || []),
+        // Transform languages from objects to stringified JSON for Appwrite
+        languages: transformLanguagesToStringifiedJSON(dataToSave.languages || []),
         additionalPhotos: Array.isArray(dataToSave.additionalPhotos) ? dataToSave.additionalPhotos : [],
         // Stringify nested objects for Appwrite storage
         familyDetails: JSON.stringify(dataToSave.familyDetails || {}),
