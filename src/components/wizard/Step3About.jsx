@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { aboutSchema } from './ValidationSchemas';
@@ -9,6 +9,141 @@ import { FiUser, FiBook, FiBriefcase, FiHeart, FiGlobe, FiPlus, FiTrash2, FiUplo
 import { languages } from '../../data/languages';
 
 const AdditionalPhotosBucketId = import.meta.env.VITE_BUCKET_ID;
+
+/**
+ * Chip Input Component for Hobbies
+ * Creates chips when user types and presses comma
+ */
+const ChipInput = ({ value = [], onChange, placeholder, error }) => {
+  const [inputValue, setInputValue] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+
+  const chips = Array.isArray(value) ? value : [];
+
+  const addChip = (chipText) => {
+    const trimmedText = chipText.trim();
+    if (trimmedText && !chips.includes(trimmedText)) {
+      const newChips = [...chips, trimmedText];
+      onChange(newChips);
+    }
+  };
+
+  const removeChip = (indexToRemove) => {
+    const newChips = chips.filter((_, index) => index !== indexToRemove);
+    onChange(newChips);
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    
+    // Check if user typed a comma
+    if (value.includes(',')) {
+      const parts = value.split(',');
+      const chipText = parts[0];
+      const remainingText = parts.slice(1).join(',');
+      
+      // Add the chip if it has content
+      if (chipText.trim()) {
+        addChip(chipText);
+      }
+      
+      // Set remaining text as input value
+      setInputValue(remainingText);
+    } else {
+      setInputValue(value);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && inputValue.trim()) {
+      e.preventDefault();
+      addChip(inputValue);
+      setInputValue('');
+    } else if (e.key === 'Backspace' && !inputValue && chips.length > 0) {
+      // Remove last chip if input is empty and backspace is pressed
+      removeChip(chips.length - 1);
+    }
+  };
+
+  const handleInputBlur = () => {
+    setIsFocused(false);
+    // Add remaining input as chip when losing focus
+    if (inputValue.trim()) {
+      addChip(inputValue);
+      setInputValue('');
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div
+        className={`min-h-[3rem] w-full px-4 py-3 border rounded-lg transition-all duration-200 cursor-text ${
+          isFocused
+            ? 'border-purple-500 ring-2 ring-purple-500 ring-opacity-20'
+            : error
+            ? 'border-red-300 bg-red-50'
+            : 'border-gray-300 hover:border-gray-400'
+        }`}
+        onClick={() => document.getElementById('hobbies-input')?.focus()}
+      >
+        {/* Chips Container */}
+        <div className="flex flex-wrap gap-2 mb-2">
+          {chips.map((chip, index) => (
+            <div
+              key={index}
+              className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium border border-purple-200 hover:bg-purple-200 transition-colors group"
+            >
+              <span>{chip}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeChip(index);
+                }}
+                className="ml-1 text-purple-600 hover:text-purple-800 hover:bg-purple-300 rounded-full p-0.5 transition-colors opacity-70 group-hover:opacity-100"
+                title="Remove hobby"
+              >
+                <FiX className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Input Field */}
+        <input
+          id="hobbies-input"
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={handleInputBlur}
+          className="w-full bg-transparent border-none outline-none text-gray-900 placeholder-gray-500"
+          placeholder={chips.length === 0 ? placeholder : "Add another hobby..."}
+          autoComplete="off"
+        />
+      </div>
+
+      {/* Helper Text */}
+      <div className="flex items-center justify-between text-xs">
+        <p className="text-gray-500">
+          Type and press comma (,) or Enter to add • Click × to remove
+        </p>
+        <span className="text-gray-400">
+          {chips.length} {chips.length === 1 ? 'hobby' : 'hobbies'}
+        </span>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <p className="text-red-500 text-sm flex items-center gap-1">
+          <span className="w-4 h-4">⚠️</span>
+          {error.message}
+        </p>
+      )}
+    </div>
+  );
+};
 
 /**
  * Step 3: About Yourself & Lifestyle Form
@@ -26,8 +161,10 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
     resolver: yupResolver(aboutSchema),
     defaultValues: {
       ...formData,
-      // Ensure hobbies is properly formatted for the input field
-      hobbies: Array.isArray(formData.hobbies) ? formData.hobbies.join(', ') : (formData.hobbies || ''),
+      // Ensure hobbies is properly formatted as array for the chip input
+      hobbies: Array.isArray(formData.hobbies) ? formData.hobbies : 
+               typeof formData.hobbies === 'string' ? 
+               formData.hobbies.split(',').map(item => item.trim()).filter(item => item) : [],
       // Initialize languages and additional photos arrays
       languages: formData.languages || [],
       additionalPhotos: formData.additionalPhotos || [],
@@ -42,7 +179,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
   });
 
   const aboutMeText = watch('aboutMe', '');
-  const hobbiesText = watch('hobbies', '');
+  const hobbiesArray = watch('hobbies', []);
   const gender = watch('gender') || formData.gender;
   const additionalPhotos = watch('additionalPhotos', []);
 
@@ -123,15 +260,16 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
     }
   };
 
+  // Handle hobbies change from chip input
+  const handleHobbiesChange = (newHobbies) => {
+    setValue('hobbies', newHobbies);
+  };
+
   const onSubmit = (data) => {
-    // Process hobbies field to convert comma-separated string to array
+    // Hobbies are already in array format from the chip input
     const processedData = {
       ...data,
-      hobbies: typeof data.hobbies === 'string' 
-        ? data.hobbies.split(',').map(item => item.trim()).filter(item => item)
-        : Array.isArray(data.hobbies) 
-          ? data.hobbies 
-          : []
+      hobbies: Array.isArray(data.hobbies) ? data.hobbies : []
     };
 
     // Call onNext with the processed data
@@ -392,29 +530,22 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
             )}
           </div>
 
-          {/* Hobbies Section */}
+          {/* Hobbies Section - Now with Chip Input */}
           <div className="mb-8">
             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
               <FiHeart className="w-4 h-4" />
               Hobbies & Interests
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                {...register('hobbies')}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                placeholder="e.g., Reading, Cooking, Traveling, Photography, Music"
-              />
-            </div>
-            <p className="text-sm text-gray-500 mt-2">
-              Separate multiple hobbies with commas
-            </p>
-            {errors.hobbies && (
-              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                <span className="w-4 h-4">⚠️</span>
-                {errors.hobbies.message}
-              </p>
-            )}
+            
+            <ChipInput
+              value={hobbiesArray}
+              onChange={handleHobbiesChange}
+              placeholder="Type your hobbies and press comma or Enter to add (e.g., Reading, Cooking, Traveling)"
+              error={errors.hobbies}
+            />
+            
+            {/* Register the hobbies field for form validation */}
+            <input type="hidden" {...register('hobbies')} />
           </div>
 
           {/* Additional Photos Section */}
