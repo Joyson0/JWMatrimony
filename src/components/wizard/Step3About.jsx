@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { aboutSchema } from './ValidationSchemas';
@@ -146,6 +146,129 @@ const ChipInput = ({ value = [], onChange, placeholder, error }) => {
 };
 
 /**
+ * Additional Photo Component
+ * Displays individual photo with delete functionality
+ */
+const AdditionalPhoto = ({ photoId, index, onRemove }) => {
+  const [imageUrl, setImageUrl] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    generateImageUrl();
+  }, [photoId]);
+
+  const generateImageUrl = async () => {
+    if (!photoId || !AdditionalPhotosBucketId) {
+      setImageError(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log('Generating URL for additional photo:', photoId);
+      
+      // Use simple getFileView without any query parameters
+      const viewUrl = storage.getFileView(AdditionalPhotosBucketId, photoId);
+      const url = viewUrl.toString();
+      
+      console.log('Generated additional photo URL:', url);
+      setImageUrl(url);
+      setImageError(false);
+    } catch (error) {
+      console.error('Error generating additional photo URL:', error);
+      setImageError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageLoad = () => {
+    console.log('Additional photo loaded successfully:', photoId);
+    setLoading(false);
+    setImageError(false);
+  };
+
+  const handleImageError = () => {
+    console.error('Additional photo failed to load:', photoId);
+    setLoading(false);
+    setImageError(true);
+  };
+
+  const handleRemove = () => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this photo? This action cannot be undone.`
+    );
+    
+    if (confirmed) {
+      onRemove(index, photoId);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="w-full h-48 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-600 border-t-transparent mx-auto mb-2"></div>
+          <p className="text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (imageError || !imageUrl) {
+    return (
+      <div className="w-full h-48 bg-red-50 rounded-lg border border-red-300 flex items-center justify-center relative group">
+        <div className="text-center">
+          <FiX className="w-8 h-8 text-red-400 mx-auto mb-2" />
+          <p className="text-sm text-red-600">Failed to load image</p>
+          <p className="text-xs text-red-500 mt-1">Photo ID: {photoId}</p>
+        </div>
+        
+        {/* Delete button for failed images */}
+        <button
+          type="button"
+          onClick={handleRemove}
+          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg"
+          title="Remove this photo"
+        >
+          <FiTrash2 className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative group">
+      <img
+        src={imageUrl}
+        alt={`Additional photo ${index + 1}`}
+        className="w-full h-48 object-cover rounded-lg border border-gray-300 shadow-sm"
+        onLoad={handleImageLoad}
+        onError={handleImageError}
+        crossOrigin="anonymous"
+      />
+      
+      {/* Delete button - appears on hover */}
+      <button
+        type="button"
+        onClick={handleRemove}
+        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 transform hover:scale-110 shadow-lg"
+        title="Remove this photo"
+      >
+        <FiTrash2 className="w-4 h-4" />
+      </button>
+      
+      {/* Photo number indicator */}
+      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-medium">
+        Photo {index + 1}
+      </div>
+    </div>
+  );
+};
+
+/**
  * Step 3: About Yourself & Lifestyle Form
  * Modern design with rich text areas and lifestyle preferences
  */
@@ -212,9 +335,9 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
 
     for (const file of files) {
       // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png'];
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
-        alert(`${file.name}: Please select a JPEG or PNG image file.`);
+        alert(`${file.name}: Please select a JPEG, PNG, or WebP image file.`);
         continue;
       }
       
@@ -233,18 +356,28 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
         );
         
         const currentPhotos = watch('additionalPhotos') || [];
-        setValue('additionalPhotos', [...currentPhotos, uploadedFile.$id]);
+        const updatedPhotos = [...currentPhotos, uploadedFile.$id];
+        setValue('additionalPhotos', updatedPhotos);
         
-        console.log('Additional photo uploaded:', uploadedFile);
+        console.log('Additional photo uploaded successfully:', uploadedFile);
+        
+        // Show success notification
+        showNotification(`Photo uploaded successfully! (${updatedPhotos.length}/3)`, 'success');
+        
       } catch (error) {
         console.error('Photo upload failed:', error);
         alert(`Failed to upload ${file.name}. Please try again.`);
       }
     }
+    
+    // Clear the input so the same file can be uploaded again if needed
+    event.target.value = '';
   };
 
   const removeAdditionalPhoto = async (index, fileId) => {
     try {
+      console.log('Removing additional photo:', fileId);
+      
       // Remove from storage
       await storage.deleteFile(AdditionalPhotosBucketId, fileId);
       
@@ -253,7 +386,11 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
       const updatedPhotos = currentPhotos.filter((_, i) => i !== index);
       setValue('additionalPhotos', updatedPhotos);
       
-      console.log('Additional photo removed:', fileId);
+      console.log('Additional photo removed successfully:', fileId);
+      
+      // Show success notification
+      showNotification('Photo removed successfully!', 'success');
+      
     } catch (error) {
       console.error('Failed to remove photo:', error);
       alert('Failed to remove photo. Please try again.');
@@ -263,6 +400,31 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
   // Handle hobbies change from chip input
   const handleHobbiesChange = (newHobbies) => {
     setValue('hobbies', newHobbies);
+  };
+
+  /**
+   * Show notification message
+   */
+  const showNotification = (message, type = 'success') => {
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-gray-500';
+    
+    const notificationDiv = document.createElement('div');
+    notificationDiv.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+    notificationDiv.textContent = message;
+    document.body.appendChild(notificationDiv);
+    
+    setTimeout(() => {
+      notificationDiv.classList.remove('translate-x-full');
+    }, 100);
+    
+    setTimeout(() => {
+      notificationDiv.classList.add('translate-x-full');
+      setTimeout(() => {
+        if (document.body.contains(notificationDiv)) {
+          document.body.removeChild(notificationDiv);
+        }
+      }, 300);
+    }, 3000);
   };
 
   const onSubmit = (data) => {
@@ -553,37 +715,34 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
             <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
               <FiUpload className="w-5 h-5" />
               Additional Photos
+              <span className="text-sm font-normal text-gray-500">
+                ({additionalPhotos.length}/3)
+              </span>
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* Display existing photos */}
               {additionalPhotos.map((photoId, index) => (
-                <div key={photoId} className="relative group">
-                  <img
-                    src={storage.getFileView(AdditionalPhotosBucketId, photoId).href}
-                    alt={`Additional photo ${index + 1}`}
-                    className="w-full h-48 object-cover rounded-lg border border-gray-300"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeAdditionalPhoto(index, photoId)}
-                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <FiX className="w-4 h-4" />
-                  </button>
-                </div>
+                <AdditionalPhoto
+                  key={`${photoId}-${index}`}
+                  photoId={photoId}
+                  index={index}
+                  onRemove={removeAdditionalPhoto}
+                />
               ))}
               
+              {/* Upload button - only show if less than 3 photos */}
               {additionalPhotos.length < 3 && (
-                <label className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors">
-                  <FiUpload className="w-8 h-8 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500 text-center">
+                <label className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group">
+                  <FiUpload className="w-8 h-8 text-gray-400 group-hover:text-purple-500 mb-2 transition-colors" />
+                  <span className="text-sm text-gray-500 group-hover:text-purple-600 text-center transition-colors">
                     Upload Photo<br />
-                    <span className="text-xs">JPEG, PNG (Max 5MB)</span>
+                    <span className="text-xs">JPEG, PNG, WebP (Max 5MB)</span>
                   </span>
                   <input
                     type="file"
                     onChange={handleAdditionalPhotoUpload}
-                    accept="image/jpeg,image/png"
+                    accept="image/jpeg,image/png,image/webp"
                     className="hidden"
                     multiple
                   />
@@ -591,9 +750,21 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
               )}
             </div>
             
-            <p className="text-sm text-gray-500">
-              You can upload up to 3 additional photos. Maximum 5MB each. Supported formats: JPEG, PNG.
-            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <FiUpload className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Photo Guidelines</h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Upload up to 3 additional photos</li>
+                    <li>• Maximum 5MB each</li>
+                    <li>• Supported formats: JPEG, PNG, WebP</li>
+                    <li>• Hover over photos to delete them</li>
+                    <li>• Confirmation required before deletion</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
 
           <WizardNavigation 
