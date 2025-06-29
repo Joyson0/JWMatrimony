@@ -149,6 +149,7 @@ const ChipInput = ({ value = [], onChange, placeholder, error }) => {
 /**
  * Additional Photo Component
  * Displays individual photo with delete functionality and original aspect ratio
+ * Mobile-friendly with touch support for delete button
  */
 const AdditionalPhoto = ({ photoId, index, onRemove }) => {
   const [imageUrl, setImageUrl] = useState(null);
@@ -156,6 +157,7 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [showDeleteButton, setShowDeleteButton] = useState(false);
 
   useEffect(() => {
     generateImageUrl();
@@ -213,6 +215,18 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
 
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
+  };
+
+  // Handle touch events for mobile
+  const handleTouchStart = () => {
+    setShowDeleteButton(true);
+  };
+
+  const handleTouchEnd = () => {
+    // Keep button visible for a short time after touch ends
+    setTimeout(() => {
+      setShowDeleteButton(false);
+    }, 3000);
   };
 
   // Calculate the display dimensions while maintaining aspect ratio
@@ -277,7 +291,7 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
         <button
           type="button"
           onClick={handleDeleteClick}
-          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg"
+          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 shadow-lg"
           title="Remove this photo"
         >
           <FiTrash2 className="w-4 h-4" />
@@ -289,7 +303,7 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
           title="Delete Failed Photo"
-          message="This photo failed to load. Would you like to remove it from your profile?"
+          message="Are you sure to delete?"
           photoIndex={index}
         />
       </div>
@@ -298,7 +312,12 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
 
   return (
     <>
-      <div className="relative group flex items-center justify-center bg-gray-50 rounded-lg border border-gray-300 overflow-hidden" style={{ height: '192px' }}>
+      <div 
+        className="relative group flex items-center justify-center bg-gray-50 rounded-lg border border-gray-300 overflow-hidden" 
+        style={{ height: '192px' }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <img
           src={imageUrl}
           alt={`Additional photo ${index + 1}`}
@@ -314,11 +333,15 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
           crossOrigin="anonymous"
         />
         
-        {/* Delete button - appears on hover */}
+        {/* Delete button - appears on hover (desktop) or touch (mobile) */}
         <button
           type="button"
           onClick={handleDeleteClick}
-          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 transform hover:scale-110 shadow-lg"
+          className={`absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg ${
+            showDeleteButton 
+              ? 'opacity-100' // Always visible on mobile when touched
+              : 'opacity-0 group-hover:opacity-100' // Hover on desktop
+          }`}
           title="Remove this photo"
         >
           <FiTrash2 className="w-4 h-4" />
@@ -328,13 +351,6 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
         <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-medium">
           Photo {index + 1}
         </div>
-        
-        {/* Aspect ratio indicator (for debugging - can be removed) */}
-        {imageDimensions.width > 0 && imageDimensions.height > 0 && (
-          <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-            {Math.round((imageDimensions.width / imageDimensions.height) * 100) / 100}:1
-          </div>
-        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -343,7 +359,7 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         title="Delete Photo"
-        message="Are you sure you want to delete this photo from your profile?"
+        message="Are you sure to delete?"
         photoIndex={index}
       />
     </>
@@ -833,22 +849,9 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
               )}
             </div>
             
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <FiUpload className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Photo Guidelines</h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• Upload up to 3 additional photos</li>
-                    <li>• Maximum 5MB each</li>
-                    <li>• Supported formats: JPEG, PNG, WebP</li>
-                    <li>• Photos display in their original aspect ratio</li>
-                    <li>• Hover over photos to delete them</li>
-                    <li>• Beautiful confirmation modal for deletions</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+            <p className="text-sm text-gray-500">
+              You can upload up to 3 additional photos. Maximum 5MB each. Supported formats: JPEG, PNG, WebP.
+            </p>
           </div>
 
           <WizardNavigation 

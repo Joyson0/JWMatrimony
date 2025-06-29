@@ -18,7 +18,7 @@ function DeleteConfirmationModal({
   onConfirm, 
   onCancel, 
   title = "Delete Photo", 
-  message = "Are you sure you want to delete this photo?",
+  message = "Are you sure to delete?",
   photoIndex = null
 }) {
   if (!isOpen) return null;
@@ -58,7 +58,7 @@ function DeleteConfirmationModal({
           </p>
           {photoIndex !== null && (
             <p className="text-sm text-gray-500">
-              Photo {photoIndex + 1} will be permanently removed from your profile.
+              Photo {photoIndex + 1} will be permanently removed.
             </p>
           )}
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -81,7 +81,7 @@ function DeleteConfirmationModal({
             className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-lg"
           >
             <FiTrash2 className="w-4 h-4" />
-            Delete Photo
+            Delete
           </button>
         </div>
       </div>
