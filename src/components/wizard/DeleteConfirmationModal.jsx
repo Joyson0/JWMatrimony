@@ -86,7 +86,7 @@ function DeleteConfirmationModal({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from {
             opacity: 0;
