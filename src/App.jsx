@@ -12,6 +12,7 @@ import Home from './pages/Home';
 import OAuthCallback from './pages/OAuthCallback';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import DashboardPage from './pages/DashboardPage';
+import FAQPage from './pages/FAQPage';
 
 /**
  * Main App Component
@@ -29,6 +30,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/auth/callback" element={<OAuthCallback />} />
+            <Route path="/faq" element={<FAQPage />} />
             
             {/* Auth Route - Redirects authenticated users to dashboard */}
             <Route 

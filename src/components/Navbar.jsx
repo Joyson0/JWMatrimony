@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { account, storage } from '../lib/appwrite';
-import { FiUser, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
+import { FiUser, FiLogOut, FiMenu, FiX, FiHelpCircle } from 'react-icons/fi';
 
 const Navbar = () => {
   // State management
@@ -209,6 +209,15 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
+            {/* Public Navigation Links */}
+            <Link
+              to="/faq"
+              className="flex items-center gap-2 text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              <FiHelpCircle className="w-4 h-4" />
+              FAQ
+            </Link>
+
             {user ? (
               <>
                 {/* Dashboard Link */}
@@ -276,6 +285,16 @@ const Navbar = () => {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 py-4">
+            {/* Public Navigation Links */}
+            <Link
+              to="/faq"
+              className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
+              onClick={closeMobileMenu}
+            >
+              <FiHelpCircle className="w-4 h-4" />
+              FAQ
+            </Link>
+
             {user ? (
               <div className="space-y-2">
                 {/* User Info */}
