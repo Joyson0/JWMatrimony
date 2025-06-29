@@ -148,13 +148,14 @@ const ChipInput = ({ value = [], onChange, placeholder, error }) => {
 
 /**
  * Additional Photo Component
- * Displays individual photo with delete functionality
+ * Displays individual photo with delete functionality and original aspect ratio
  */
 const AdditionalPhoto = ({ photoId, index, onRemove }) => {
   const [imageUrl, setImageUrl] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     generateImageUrl();
@@ -185,10 +186,14 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
     }
   };
 
-  const handleImageLoad = () => {
+  const handleImageLoad = (e) => {
     console.log('Additional photo loaded successfully:', photoId);
     setLoading(false);
     setImageError(false);
+    
+    // Get the natural dimensions of the image
+    const { naturalWidth, naturalHeight } = e.target;
+    setImageDimensions({ width: naturalWidth, height: naturalHeight });
   };
 
   const handleImageError = () => {
@@ -209,6 +214,44 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
   };
+
+  // Calculate the display dimensions while maintaining aspect ratio
+  const getDisplayDimensions = () => {
+    const maxHeight = 192; // 48 * 4 = 192px (h-48)
+    const maxWidth = 300; // Maximum width to prevent overly wide images
+    
+    if (imageDimensions.width === 0 || imageDimensions.height === 0) {
+      return { width: '100%', height: maxHeight };
+    }
+    
+    const aspectRatio = imageDimensions.width / imageDimensions.height;
+    
+    // If image is taller than maxHeight, scale down
+    if (imageDimensions.height > maxHeight) {
+      const scaledWidth = maxHeight * aspectRatio;
+      return {
+        width: Math.min(scaledWidth, maxWidth),
+        height: maxHeight
+      };
+    }
+    
+    // If image is wider than maxWidth, scale down
+    if (imageDimensions.width > maxWidth) {
+      const scaledHeight = maxWidth / aspectRatio;
+      return {
+        width: maxWidth,
+        height: Math.min(scaledHeight, maxHeight)
+      };
+    }
+    
+    // Use original dimensions if they fit within constraints
+    return {
+      width: imageDimensions.width,
+      height: imageDimensions.height
+    };
+  };
+
+  const displayDimensions = getDisplayDimensions();
 
   if (loading) {
     return (
@@ -255,11 +298,17 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
 
   return (
     <>
-      <div className="relative group">
+      <div className="relative group flex items-center justify-center bg-gray-50 rounded-lg border border-gray-300 overflow-hidden" style={{ height: '192px' }}>
         <img
           src={imageUrl}
           alt={`Additional photo ${index + 1}`}
-          className="w-full h-48 object-cover rounded-lg border border-gray-300 shadow-sm"
+          className="rounded-lg shadow-sm object-contain"
+          style={{
+            width: displayDimensions.width,
+            height: displayDimensions.height,
+            maxWidth: '100%',
+            maxHeight: '100%'
+          }}
           onLoad={handleImageLoad}
           onError={handleImageError}
           crossOrigin="anonymous"
@@ -279,6 +328,13 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
         <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-medium">
           Photo {index + 1}
         </div>
+        
+        {/* Aspect ratio indicator (for debugging - can be removed) */}
+        {imageDimensions.width > 0 && imageDimensions.height > 0 && (
+          <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+            {Math.round((imageDimensions.width / imageDimensions.height) * 100) / 100}:1
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -746,7 +802,8 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
               </span>
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {/* Responsive grid that adapts to photo aspect ratios */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               {/* Display existing photos */}
               {additionalPhotos.map((photoId, index) => (
                 <AdditionalPhoto
@@ -759,7 +816,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
               
               {/* Upload button - only show if less than 3 photos */}
               {additionalPhotos.length < 3 && (
-                <label className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group">
+                <label className="h-48 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group">
                   <FiUpload className="w-8 h-8 text-gray-400 group-hover:text-purple-500 mb-2 transition-colors" />
                   <span className="text-sm text-gray-500 group-hover:text-purple-600 text-center transition-colors">
                     Upload Photo<br />
@@ -785,6 +842,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
                     <li>• Upload up to 3 additional photos</li>
                     <li>• Maximum 5MB each</li>
                     <li>• Supported formats: JPEG, PNG, WebP</li>
+                    <li>• Photos display in their original aspect ratio</li>
                     <li>• Hover over photos to delete them</li>
                     <li>• Beautiful confirmation modal for deletions</li>
                   </ul>
