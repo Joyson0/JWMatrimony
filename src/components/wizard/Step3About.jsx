@@ -426,6 +426,50 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
 
   const spiritualOptions = getSpiritualStatusOptions();
 
+  /**
+   * Save photo changes to database immediately
+   * @param {Array} updatedPhotos - Updated photos array
+   */
+  const savePhotosToDatabase = async (updatedPhotos) => {
+    try {
+      console.log('Saving photos to database immediately:', updatedPhotos);
+      
+      // Get current user and profile
+      const { account } = await import('../../lib/appwrite');
+      const { db } = await import('../../lib/database');
+      const { Query } = await import('appwrite');
+      
+      const currentUser = await account.get();
+      
+      // Find user's profile
+      const response = await db.profiles.list([
+        Query.equal('userId', currentUser.$id)
+      ]);
+      
+      if (response.documents.length > 0) {
+        const profileDoc = response.documents[0];
+        
+        // Update only the additionalPhotos field
+        await db.profiles.update(profileDoc.$id, {
+          additionalPhotos: updatedPhotos
+        });
+        
+        console.log('Photos saved to database successfully');
+        
+        // Trigger navbar update
+        window.dispatchEvent(new CustomEvent('profileUpdated'));
+        
+        return true;
+      } else {
+        console.warn('No profile found to update photos');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error saving photos to database:', error);
+      throw error;
+    }
+  };
+
   const handleAdditionalPhotoUpload = async (event) => {
     const files = Array.from(event.target.files);
     
@@ -450,6 +494,9 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
       }
 
       try {
+        // Show uploading notification
+        showNotification('Uploading photo...', 'info');
+        
         const uploadedFile = await storage.createFile(
           AdditionalPhotosBucketId,
           ID.unique(),
@@ -458,7 +505,15 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
         
         const currentPhotos = watch('additionalPhotos') || [];
         const updatedPhotos = [...currentPhotos, uploadedFile.$id];
+        
+        // Update form state
         setValue('additionalPhotos', updatedPhotos);
+        
+        // Update parent component's form data immediately
+        updateFormData({ additionalPhotos: updatedPhotos });
+        
+        // Save to database immediately
+        await savePhotosToDatabase(updatedPhotos);
         
         // Force re-render
         setPhotoUpdateKey(prev => prev + 1);
@@ -466,11 +521,13 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
         console.log('Additional photo uploaded successfully:', uploadedFile);
         
         // Show success notification
-        showNotification(`Photo uploaded successfully! (${updatedPhotos.length}/3)`, 'success');
+        showNotification(`Photo uploaded and saved! (${updatedPhotos.length}/3)`, 'success');
         
       } catch (error) {
         console.error('Photo upload failed:', error);
-        alert(`Failed to upload ${file.name}. Please try again.`);
+        
+        // Show error notification
+        showNotification(`Failed to upload ${file.name}. Please try again.`, 'error');
       }
     }
     
@@ -481,6 +538,9 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
   const removeAdditionalPhoto = async (index, fileId) => {
     try {
       console.log('Removing additional photo:', fileId, 'at index:', index);
+      
+      // Show removing notification
+      showNotification('Removing photo...', 'info');
       
       // Get current photos array
       const currentPhotos = watch('additionalPhotos') || [];
@@ -500,17 +560,22 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
       // Update parent component's form data immediately
       updateFormData({ additionalPhotos: updatedPhotos });
       
+      // Save to database immediately
+      await savePhotosToDatabase(updatedPhotos);
+      
       // Force re-render to ensure UI updates
       setPhotoUpdateKey(prev => prev + 1);
       
       console.log('Additional photo removed successfully:', fileId);
       
       // Show success notification
-      showNotification('Photo removed successfully!', 'success');
+      showNotification('Photo removed and saved!', 'success');
       
     } catch (error) {
       console.error('Failed to remove photo:', error);
-      alert('Failed to remove photo. Please try again.');
+      
+      // Show error notification
+      showNotification('Failed to remove photo. Please try again.', 'error');
     }
   };
 
@@ -523,7 +588,9 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
    * Show notification message
    */
   const showNotification = (message, type = 'success') => {
-    const bgColor = type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-gray-500';
+    const bgColor = type === 'success' ? 'bg-green-500' : 
+                   type === 'info' ? 'bg-blue-500' : 
+                   type === 'error' ? 'bg-red-500' : 'bg-gray-500';
     
     const notificationDiv = document.createElement('div');
     notificationDiv.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
@@ -836,6 +903,14 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
                 ({additionalPhotos.length}/3)
               </span>
             </h3>
+            
+            {/* Auto-save notice */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700 flex items-center gap-2">
+                <FiUpload className="w-4 h-4" />
+                Photos are automatically saved when uploaded or deleted
+              </p>
+            </div>
             
             {/* Responsive grid that adapts to photo aspect ratios */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
