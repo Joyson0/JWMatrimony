@@ -404,6 +404,9 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
   const gender = watch('gender') || formData.gender;
   const additionalPhotos = watch('additionalPhotos', []);
 
+  // Add state to force re-render when photos change
+  const [photoUpdateKey, setPhotoUpdateKey] = useState(0);
+
   const fluencyLevels = ['Native', 'Fluent', 'Intermediate', 'Beginner'];
 
   // Spiritual status options based on gender
@@ -457,6 +460,9 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
         const updatedPhotos = [...currentPhotos, uploadedFile.$id];
         setValue('additionalPhotos', updatedPhotos);
         
+        // Force re-render
+        setPhotoUpdateKey(prev => prev + 1);
+        
         console.log('Additional photo uploaded successfully:', uploadedFile);
         
         // Show success notification
@@ -474,15 +480,28 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
 
   const removeAdditionalPhoto = async (index, fileId) => {
     try {
-      console.log('Removing additional photo:', fileId);
+      console.log('Removing additional photo:', fileId, 'at index:', index);
       
-      // Remove from storage
-      await storage.deleteFile(AdditionalPhotosBucketId, fileId);
-      
-      // Remove from form
+      // Get current photos array
       const currentPhotos = watch('additionalPhotos') || [];
-      const updatedPhotos = currentPhotos.filter((_, i) => i !== index);
+      console.log('Current photos before removal:', currentPhotos);
+      
+      // Remove from storage first
+      await storage.deleteFile(AdditionalPhotosBucketId, fileId);
+      console.log('Photo deleted from storage successfully');
+      
+      // Remove from form state - filter out the specific photo ID
+      const updatedPhotos = currentPhotos.filter(photoId => photoId !== fileId);
+      console.log('Updated photos after removal:', updatedPhotos);
+      
+      // Update form value
       setValue('additionalPhotos', updatedPhotos);
+      
+      // Update parent component's form data immediately
+      updateFormData({ additionalPhotos: updatedPhotos });
+      
+      // Force re-render to ensure UI updates
+      setPhotoUpdateKey(prev => prev + 1);
       
       console.log('Additional photo removed successfully:', fileId);
       
@@ -820,10 +839,10 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
             
             {/* Responsive grid that adapts to photo aspect ratios */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              {/* Display existing photos */}
+              {/* Display existing photos - use photoUpdateKey to force re-render */}
               {additionalPhotos.map((photoId, index) => (
                 <AdditionalPhoto
-                  key={`${photoId}-${index}`}
+                  key={`${photoId}-${index}-${photoUpdateKey}`}
                   photoId={photoId}
                   index={index}
                   onRemove={removeAdditionalPhoto}
