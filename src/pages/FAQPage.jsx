@@ -16,7 +16,6 @@ function FAQPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [expandedItems, setExpandedItems] = useState(new Set());
 
   useEffect(() => {
@@ -50,23 +49,10 @@ function FAQPage() {
   };
 
   /**
-   * Get unique categories from FAQs
-   */
-  const getCategories = () => {
-    const categories = [...new Set(faqs.map(faq => faq.category))].sort();
-    return ['All', ...categories];
-  };
-
-  /**
-   * Filter FAQs based on search term and selected category
+   * Filter FAQs based on search term only
    */
   const getFilteredFAQs = () => {
     let filtered = faqs;
-
-    // Filter by category
-    if (selectedCategory !== 'All') {
-      filtered = filtered.filter(faq => faq.category === selectedCategory);
-    }
 
     // Filter by search term
     if (searchTerm.trim()) {
@@ -111,7 +97,6 @@ function FAQPage() {
   };
 
   const filteredFAQs = getFilteredFAQs();
-  const categories = getCategories();
 
   // Loading state
   if (loading) {
@@ -167,7 +152,7 @@ function FAQPage() {
           </p>
         </div>
 
-        {/* Search and Filters */}
+        {/* Search and Controls */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search Bar */}
@@ -180,21 +165,6 @@ function FAQPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               />
-            </div>
-
-            {/* Category Filter */}
-            <div className="lg:w-48">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* Expand/Collapse Controls */}
@@ -221,7 +191,6 @@ function FAQPage() {
             ) : (
               <span>
                 Showing {filteredFAQs.length} of {faqs.length} FAQ{filteredFAQs.length !== 1 ? 's' : ''}
-                {selectedCategory !== 'All' && ` in ${selectedCategory}`}
                 {searchTerm && ` matching "${searchTerm}"`}
               </span>
             )}
@@ -234,20 +203,17 @@ function FAQPage() {
             <FiSearch className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No FAQs Found</h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm || selectedCategory !== 'All' 
-                ? 'Try adjusting your search terms or category filter.'
+              {searchTerm 
+                ? 'Try adjusting your search terms.'
                 : 'No FAQs are available at the moment.'
               }
             </p>
-            {(searchTerm || selectedCategory !== 'All') && (
+            {searchTerm && (
               <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedCategory('All');
-                }}
+                onClick={() => setSearchTerm('')}
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
-                Clear filters
+                Clear search
               </button>
             )}
           </div>
@@ -260,7 +226,7 @@ function FAQPage() {
               return (
                 <div key={faq.$id}>
                   {/* Category Header */}
-                  {isFirstInCategory && selectedCategory === 'All' && (
+                  {isFirstInCategory && (
                     <div className="mb-3 mt-6 first:mt-0">
                       <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
@@ -279,11 +245,6 @@ function FAQPage() {
                         <h3 className="font-semibold text-gray-900 text-lg leading-relaxed">
                           {faq.question}
                         </h3>
-                        {selectedCategory === 'All' && (
-                          <span className="inline-block mt-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                            {faq.category}
-                          </span>
-                        )}
                       </div>
                       <div className="flex-shrink-0">
                         {isExpanded ? (
