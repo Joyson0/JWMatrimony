@@ -11,6 +11,11 @@ const collections = [
         databaseId: import.meta.env.VITE_DATABASE_ID,
         id: import.meta.env.VITE_COLLECTION_ID_SHORTLISTS,
         name: 'shortlists'
+    },
+    {
+        databaseId: import.meta.env.VITE_DATABASE_ID,
+        id: import.meta.env.VITE_COLLECTION_ID_FAQS,
+        name: 'faqs'
     }
 ]
 
