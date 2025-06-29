@@ -3,6 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { aboutSchema } from './ValidationSchemas';
 import WizardNavigation from './WizardNavigation';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 import { storage } from '../../lib/appwrite';
 import { ID } from 'appwrite';
 import { FiUser, FiBook, FiBriefcase, FiHeart, FiGlobe, FiPlus, FiTrash2, FiUpload, FiX, FiStar } from 'react-icons/fi';
@@ -153,6 +154,7 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
   const [imageUrl, setImageUrl] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     generateImageUrl();
@@ -195,15 +197,17 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
     setImageError(true);
   };
 
-  const handleRemove = () => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Are you sure you want to delete this photo? This action cannot be undone.`
-    );
-    
-    if (confirmed) {
-      onRemove(index, photoId);
-    }
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setShowDeleteModal(false);
+    onRemove(index, photoId);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
   };
 
   if (loading) {
@@ -229,42 +233,64 @@ const AdditionalPhoto = ({ photoId, index, onRemove }) => {
         {/* Delete button for failed images */}
         <button
           type="button"
-          onClick={handleRemove}
+          onClick={handleDeleteClick}
           className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg"
           title="Remove this photo"
         >
           <FiTrash2 className="w-4 h-4" />
         </button>
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          title="Delete Failed Photo"
+          message="This photo failed to load. Would you like to remove it from your profile?"
+          photoIndex={index}
+        />
       </div>
     );
   }
 
   return (
-    <div className="relative group">
-      <img
-        src={imageUrl}
-        alt={`Additional photo ${index + 1}`}
-        className="w-full h-48 object-cover rounded-lg border border-gray-300 shadow-sm"
-        onLoad={handleImageLoad}
-        onError={handleImageError}
-        crossOrigin="anonymous"
-      />
-      
-      {/* Delete button - appears on hover */}
-      <button
-        type="button"
-        onClick={handleRemove}
-        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 transform hover:scale-110 shadow-lg"
-        title="Remove this photo"
-      >
-        <FiTrash2 className="w-4 h-4" />
-      </button>
-      
-      {/* Photo number indicator */}
-      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-medium">
-        Photo {index + 1}
+    <>
+      <div className="relative group">
+        <img
+          src={imageUrl}
+          alt={`Additional photo ${index + 1}`}
+          className="w-full h-48 object-cover rounded-lg border border-gray-300 shadow-sm"
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          crossOrigin="anonymous"
+        />
+        
+        {/* Delete button - appears on hover */}
+        <button
+          type="button"
+          onClick={handleDeleteClick}
+          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 transform hover:scale-110 shadow-lg"
+          title="Remove this photo"
+        >
+          <FiTrash2 className="w-4 h-4" />
+        </button>
+        
+        {/* Photo number indicator */}
+        <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-medium">
+          Photo {index + 1}
+        </div>
       </div>
-    </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        title="Delete Photo"
+        message="Are you sure you want to delete this photo from your profile?"
+        photoIndex={index}
+      />
+    </>
   );
 };
 
@@ -760,7 +786,7 @@ function Step3About({ formData, updateFormData, onNext, onBack, currentStep, tot
                     <li>• Maximum 5MB each</li>
                     <li>• Supported formats: JPEG, PNG, WebP</li>
                     <li>• Hover over photos to delete them</li>
-                    <li>• Confirmation required before deletion</li>
+                    <li>• Beautiful confirmation modal for deletions</li>
                   </ul>
                 </div>
               </div>
