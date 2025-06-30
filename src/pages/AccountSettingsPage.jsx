@@ -220,14 +220,33 @@ function AccountSettingsPage() {
   };
 
   /**
-   * Handle user logout
+   * Handle user logout with proper state cleanup
    */
   const handleLogout = async () => {
     try {
+      // Delete the current session
       await account.deleteSession('current');
+      
+      // Clear local state immediately
+      setUser(null);
+      setUserProfile(null);
+      
+      // Trigger a custom event to notify navbar to update immediately
+      window.dispatchEvent(new CustomEvent('userLoggedOut'));
+      
+      // Navigate to home page
       navigate('/');
+      
+      // Show success notification
+      showNotification('Successfully signed out', 'success');
+      
     } catch (error) {
       console.error('Logout failed:', error);
+      // Even if logout fails, clear local state and navigate
+      setUser(null);
+      setUserProfile(null);
+      window.dispatchEvent(new CustomEvent('userLoggedOut'));
+      navigate('/');
     }
   };
 
@@ -293,7 +312,12 @@ function AccountSettingsPage() {
         console.log('Profile document deleted successfully');
       }
 
-      // Step 3: Delete user account from Appwrite
+      // Step 3: Clear local state and notify navbar
+      setUser(null);
+      setUserProfile(null);
+      window.dispatchEvent(new CustomEvent('userLoggedOut'));
+
+      // Step 4: Delete user account from Appwrite (this will also log them out)
       console.log('Deleting user account from Appwrite...');
       await account.deleteIdentity(user.$id);
       console.log('User account deleted successfully');

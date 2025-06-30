@@ -21,7 +21,7 @@ const Navbar = () => {
     checkAuthStatus();
   }, []);
 
-  // Listen for profile updates and location changes
+  // Listen for profile updates, location changes, and logout events
   useEffect(() => {
     const handleProfileUpdate = () => {
       console.log('Profile update event received in navbar');
@@ -30,8 +30,20 @@ const Navbar = () => {
       }
     };
 
-    // Listen for custom profile update events
+    const handleUserLogout = () => {
+      console.log('User logout event received in navbar');
+      // Immediately clear all user state
+      setUser(null);
+      setUserProfile(null);
+      setProfileImageUrl(null);
+      setImageError(false);
+      setDropdownOpen(false);
+      setMobileMenuOpen(false);
+    };
+
+    // Listen for custom events
     window.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener('userLoggedOut', handleUserLogout);
     
     // Check for updates when location changes (user navigates)
     if (user) {
@@ -40,6 +52,7 @@ const Navbar = () => {
 
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener('userLoggedOut', handleUserLogout);
     };
   }, [user, location.pathname]);
 
@@ -60,6 +73,8 @@ const Navbar = () => {
       console.log('User not authenticated');
       setUser(null);
       setUserProfile(null);
+      setProfileImageUrl(null);
+      setImageError(false);
     } finally {
       setLoading(false);
     }
@@ -121,18 +136,36 @@ const Navbar = () => {
   };
 
   /**
-   * Handle user logout
+   * Handle user logout with immediate state update
    */
   const handleLogout = async () => {
     try {
+      // Delete the session
       await account.deleteSession('current');
+      
+      // Immediately clear all state
       setUser(null);
       setUserProfile(null);
       setProfileImageUrl(null);
+      setImageError(false);
       setDropdownOpen(false);
+      setMobileMenuOpen(false);
+      
+      // Navigate to home
       navigate('/');
+      
     } catch (error) {
       console.error('Logout failed:', error);
+      
+      // Even if logout fails, clear the state and navigate
+      // This handles cases where the session might already be invalid
+      setUser(null);
+      setUserProfile(null);
+      setProfileImageUrl(null);
+      setImageError(false);
+      setDropdownOpen(false);
+      setMobileMenuOpen(false);
+      navigate('/');
     }
   };
 
