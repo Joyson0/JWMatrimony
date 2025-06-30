@@ -86,6 +86,7 @@ const DeleteConfirmationModal = ({ isOpen, onConfirm, onCancel, isDeleting }) =>
                     <li>Your profile information</li>
                     <li>All uploaded photos</li>
                     <li>Your account preferences</li>
+                    <li>Your user account from Appwrite</li>
                     <li>All associated data</li>
                   </ul>
                 </div>
@@ -292,6 +293,39 @@ function AccountSettingsPage() {
   };
 
   /**
+   * Call the server-side edge function to delete the user account
+   */
+  const deleteUserAccount = async () => {
+    try {
+      // Get current session token
+      const session = await account.getSession('current');
+      const sessionToken = session.secret;
+
+      // Call the edge function to delete the user
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete user account');
+      }
+
+      const result = await response.json();
+      console.log('User account deleted successfully:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('Error calling delete-user edge function:', error);
+      throw error;
+    }
+  };
+
+  /**
    * Handle complete account deletion
    */
   const handleDeleteAccount = async () => {
@@ -317,9 +351,9 @@ function AccountSettingsPage() {
       setUserProfile(null);
       window.dispatchEvent(new CustomEvent('userLoggedOut'));
 
-      // Step 4: Delete user account from Appwrite (this will also log them out)
+      // Step 4: Delete user account from Appwrite using server-side function
       console.log('Deleting user account from Appwrite...');
-      await account.deleteIdentity(user.$id);
+      await deleteUserAccount();
       console.log('User account deleted successfully');
 
       // Show success message and redirect
@@ -485,6 +519,7 @@ function AccountSettingsPage() {
                     <div className="text-sm text-red-600 space-y-1">
                       <p>• All profile information will be deleted</p>
                       <p>• All uploaded photos will be removed</p>
+                      <p>• Your user account will be permanently deleted</p>
                       <p>• Your account will be permanently deactivated</p>
                     </div>
                   </div>
