@@ -30,7 +30,7 @@ function FAQPage() {
       setLoading(true);
       const response = await db.faqs.list();
       
-      // Sort FAQs by order field, then by category
+      // Sort FAQs by category first, then by order field
       const sortedFAQs = response.documents.sort((a, b) => {
         if (a.category !== b.category) {
           return a.category.localeCompare(b.category);
@@ -68,6 +68,23 @@ function FAQPage() {
   };
 
   /**
+   * Group filtered FAQs by category to avoid duplicate headers
+   */
+  const getGroupedFAQs = () => {
+    const filteredFAQs = getFilteredFAQs();
+    const grouped = {};
+    
+    filteredFAQs.forEach(faq => {
+      if (!grouped[faq.category]) {
+        grouped[faq.category] = [];
+      }
+      grouped[faq.category].push(faq);
+    });
+    
+    return grouped;
+  };
+
+  /**
    * Toggle expanded state of FAQ item
    */
   const toggleExpanded = (faqId) => {
@@ -97,6 +114,7 @@ function FAQPage() {
   };
 
   const filteredFAQs = getFilteredFAQs();
+  const groupedFAQs = getGroupedFAQs();
 
   // Loading state
   if (loading) {
@@ -198,7 +216,7 @@ function FAQPage() {
         </div>
 
         {/* FAQ List */}
-        {filteredFAQs.length === 0 ? (
+        {Object.keys(groupedFAQs).length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
             <FiSearch className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No FAQs Found</h3>
@@ -218,57 +236,58 @@ function FAQPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredFAQs.map((faq, index) => {
-              const isExpanded = expandedItems.has(faq.$id);
-              const isFirstInCategory = index === 0 || filteredFAQs[index - 1].category !== faq.category;
-              
-              return (
-                <div key={faq.$id}>
-                  {/* Category Header */}
-                  {isFirstInCategory && (
-                    <div className="mb-3 mt-6 first:mt-0">
-                      <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                        {faq.category}
-                      </h2>
-                    </div>
-                  )}
+          <div className="space-y-8">
+            {Object.entries(groupedFAQs).map(([category, categoryFAQs], categoryIndex) => (
+              <div key={category} className={categoryIndex > 0 ? 'mt-12' : ''}>
+                {/* Category Header */}
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    {category}
+                  </h2>
+                </div>
 
-                  {/* FAQ Item */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md">
-                    <button
-                      onClick={() => toggleExpanded(faq.$id)}
-                      className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
-                    >
-                      <div className="flex-1 pr-4">
-                        <h3 className="font-semibold text-gray-900 text-lg leading-relaxed">
-                          {faq.question}
-                        </h3>
-                      </div>
-                      <div className="flex-shrink-0">
-                        {isExpanded ? (
-                          <FiChevronUp className="w-5 h-5 text-gray-500" />
-                        ) : (
-                          <FiChevronDown className="w-5 h-5 text-gray-500" />
-                        )}
-                      </div>
-                    </button>
+                {/* FAQ Items for this category */}
+                <div className="space-y-4">
+                  {categoryFAQs.map((faq) => {
+                    const isExpanded = expandedItems.has(faq.$id);
+                    
+                    return (
+                      <div key={faq.$id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md">
+                        <button
+                          onClick={() => toggleExpanded(faq.$id)}
+                          className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
+                        >
+                          <div className="flex-1 pr-4">
+                            <h3 className="font-semibold text-gray-900 text-base leading-relaxed">
+                              {faq.question}
+                            </h3>
+                          </div>
+                          <div className="flex-shrink-0">
+                            {isExpanded ? (
+                              <FiChevronUp className="w-5 h-5 text-gray-500" />
+                            ) : (
+                              <FiChevronDown className="w-5 h-5 text-gray-500" />
+                            )}
+                          </div>
+                        </button>
 
-                    {/* Answer */}
-                    <div className={`transition-all duration-300 ease-in-out ${
-                      isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                    } overflow-hidden`}>
-                      <div className="px-6 pb-6 border-t border-gray-100">
-                        <div className="pt-4 text-gray-700 leading-relaxed whitespace-pre-line">
-                          {faq.answer}
+                        {/* Answer */}
+                        <div className={`transition-all duration-300 ease-in-out ${
+                          isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                        } overflow-hidden`}>
+                          <div className="px-6 pb-6 border-t border-gray-100">
+                            <div className="pt-4 text-gray-700 leading-relaxed whitespace-pre-line">
+                              {faq.answer}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
 
