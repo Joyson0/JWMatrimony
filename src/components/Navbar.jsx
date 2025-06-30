@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { account, storage } from '../lib/appwrite';
-import { FiUser, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
+import { FiUser, FiLogOut, FiMenu, FiX, FiSettings } from 'react-icons/fi';
 
 const Navbar = () => {
   // State management
@@ -240,6 +240,14 @@ const Navbar = () => {
                         <FiUser className="mr-3 h-4 w-4" />
                         Edit Profile
                       </Link>
+                      <Link
+                        to="/account-settings"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        onClick={closeDropdown}
+                      >
+                        <FiSettings className="mr-3 h-4 w-4" />
+                        Account Settings
+                      </Link>
                       <button
                         onClick={handleLogout}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
@@ -298,6 +306,13 @@ const Navbar = () => {
                   onClick={closeMobileMenu}
                 >
                   Edit Profile
+                </Link>
+                <Link
+                  to="/account-settings"
+                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
+                  onClick={closeMobileMenu}
+                >
+                  Account Settings
                 </Link>
                 <button
                   onClick={() => {

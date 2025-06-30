@@ -12,6 +12,7 @@ import Home from './pages/Home';
 import OAuthCallback from './pages/OAuthCallback';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import DashboardPage from './pages/DashboardPage';
+import AccountSettingsPage from './pages/AccountSettingsPage';
 
 /**
  * Main App Component
@@ -54,6 +55,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/account-settings" 
+              element={
+                <ProtectedRoute>
+                  <AccountSettingsPage />
                 </ProtectedRoute>
               } 
             />
