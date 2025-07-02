@@ -7,11 +7,11 @@ from appwrite.exception import AppwriteException
 
 def main(context):
     """
-    Appwrite Function to delete user accounts
+    Appwrite Function to block user accounts
     
     This function:
     1. Validates the user's session
-    2. Uses server permissions to delete the user account
+    2. Uses server permissions to block the user account
     3. Returns success/error response with CORS headers
     """
     
@@ -70,29 +70,30 @@ def main(context):
         
         users_service = Users(server_client)
         
-        context.log(f"Attempting to delete user: {user_id}")
+        context.log(f"Attempting to block user: {user_id}")
         
-        # Delete the user using server permissions
-        users_service.delete(user_id)
+        # Block the user using server permissions (set status to false)
+        users_service.update_status(user_id, False)
         
-        context.log(f"User {user_id} deleted successfully")
+        context.log(f"User {user_id} blocked successfully")
         
         return context.res.json({
             'success': True,
-            'message': 'User account deleted successfully',
-            'userId': user_id
+            'message': 'User account blocked successfully',
+            'userId': user_id,
+            'action': 'blocked'
         }, 200, cors_headers)
         
     except AppwriteException as e:
-        context.error(f'Appwrite error deleting user: {str(e)}')
+        context.error(f'Appwrite error blocking user: {str(e)}')
         return context.res.json({
-            'error': 'Failed to delete user account',
+            'error': 'Failed to block user account',
             'details': str(e)
         }, 500, cors_headers)
         
     except Exception as e:
-        context.error(f'Unexpected error deleting user: {str(e)}')
+        context.error(f'Unexpected error blocking user: {str(e)}')
         return context.res.json({
-            'error': 'Failed to delete user account',
+            'error': 'Failed to block user account',
             'details': str(e)
         }, 500, cors_headers)

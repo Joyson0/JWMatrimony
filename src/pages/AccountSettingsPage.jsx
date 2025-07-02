@@ -14,7 +14,8 @@ import {
   FiMail,
   FiCalendar,
   FiX,
-  FiCheck
+  FiCheck,
+  FiUserX
 } from 'react-icons/fi';
 
 /**
@@ -23,7 +24,7 @@ import {
 const DeleteConfirmationModal = ({ isOpen, onConfirm, onCancel, isDeleting }) => {
   const [confirmText, setConfirmText] = useState('');
   const [step, setStep] = useState(1);
-  const requiredText = 'DELETE MY ACCOUNT';
+  const requiredText = 'BLOCK MY ACCOUNT';
 
   const handleConfirm = () => {
     if (step === 1) {
@@ -48,9 +49,9 @@ const DeleteConfirmationModal = ({ isOpen, onConfirm, onCancel, isDeleting }) =>
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-              <FiAlertTriangle className="w-5 h-5 text-red-600" />
+              <FiUserX className="w-5 h-5 text-red-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Delete Account</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Block Account</h3>
           </div>
           {!isDeleting && (
             <button
@@ -67,27 +68,26 @@ const DeleteConfirmationModal = ({ isOpen, onConfirm, onCancel, isDeleting }) =>
           {step === 1 ? (
             <div>
               <h4 className="text-lg font-semibold text-red-600 mb-4">
-                Are you absolutely sure?
+                Are you sure you want to block your account?
               </h4>
               <div className="space-y-3 mb-6">
-                <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <FiAlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <FiAlertTriangle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-red-800">This action cannot be undone</p>
-                    <p className="text-sm text-red-700 mt-1">
-                      Your profile, photos, and all associated data will be permanently deleted.
+                    <p className="text-sm font-medium text-orange-800">Your account will be blocked</p>
+                    <p className="text-sm text-orange-700 mt-1">
+                      You won't be able to sign in, but your data will be preserved.
                     </p>
                   </div>
                 </div>
                 
                 <div className="text-sm text-gray-600 space-y-2">
-                  <p className="font-medium">This will permanently delete:</p>
+                  <p className="font-medium">This will:</p>
                   <ul className="list-disc list-inside space-y-1 ml-4">
-                    <li>Your profile information</li>
-                    <li>All uploaded photos</li>
-                    <li>Your account preferences</li>
-                    <li>Your user account from Appwrite</li>
-                    <li>All associated data</li>
+                    <li>Block your account access</li>
+                    <li>Prevent you from signing in</li>
+                    <li>Keep your profile data intact</li>
+                    <li>Allow account recovery by contacting support</li>
                   </ul>
                 </div>
               </div>
@@ -98,7 +98,7 @@ const DeleteConfirmationModal = ({ isOpen, onConfirm, onCancel, isDeleting }) =>
                 Final Confirmation
               </h4>
               <p className="text-gray-600 mb-4">
-                To confirm deletion, please type <span className="font-mono font-bold text-red-600">{requiredText}</span> below:
+                To confirm blocking your account, please type <span className="font-mono font-bold text-red-600">{requiredText}</span> below:
               </p>
               <input
                 type="text"
@@ -144,12 +144,12 @@ const DeleteConfirmationModal = ({ isOpen, onConfirm, onCancel, isDeleting }) =>
               {isDeleting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  Deleting...
+                  Blocking...
                 </>
               ) : (
                 <>
-                  <FiTrash2 className="w-4 h-4" />
-                  Delete Account
+                  <FiUserX className="w-4 h-4" />
+                  Block Account
                 </>
               )}
             </button>
@@ -293,15 +293,15 @@ function AccountSettingsPage() {
   };
 
   /**
-   * Call the Appwrite Function to delete the user account
+   * Call the Appwrite Function to block the user account
    */
-  const deleteUserAccount = async () => {
+  const blockUserAccount = async () => {
     try {
       // Get current session token
       const session = await account.getSession('current');
       const sessionToken = session.secret;
 
-      // Call the Appwrite Function to delete the user
+      // Call the Appwrite Function to block the user
       const functionUrl = `${import.meta.env.VITE_APPWRITE_ENDPOINT}/functions/delete-user/executions`;
       
       const response = await fetch(functionUrl, {
@@ -316,27 +316,27 @@ function AccountSettingsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete user account');
+        throw new Error(errorData.error || 'Failed to block user account');
       }
 
       const result = await response.json();
-      console.log('User account deleted successfully:', result);
+      console.log('User account blocked successfully:', result);
       
       return result;
     } catch (error) {
-      console.error('Error calling delete-user function:', error);
+      console.error('Error calling block-user function:', error);
       throw error;
     }
   };
 
   /**
-   * Handle complete account deletion
+   * Handle complete account blocking
    */
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
 
     try {
-      console.log('Starting account deletion process...');
+      console.log('Starting account blocking process...');
 
       // Step 1: Delete all photos from storage
       if (userProfile) {
@@ -355,24 +355,24 @@ function AccountSettingsPage() {
       setUserProfile(null);
       window.dispatchEvent(new CustomEvent('userLoggedOut'));
 
-      // Step 4: Delete user account from Appwrite using Function
-      console.log('Deleting user account from Appwrite...');
-      await deleteUserAccount();
-      console.log('User account deleted successfully');
+      // Step 4: Block user account from Appwrite using Function
+      console.log('Blocking user account from Appwrite...');
+      await blockUserAccount();
+      console.log('User account blocked successfully');
 
       // Show success message and redirect
-      showNotification('Account deleted successfully', 'success');
+      showNotification('Account blocked successfully. Contact support to reactivate.', 'success');
       
       // Redirect to home page after a brief delay
       setTimeout(() => {
         navigate('/');
-      }, 2000);
+      }, 3000);
 
     } catch (error) {
-      console.error('Error during account deletion:', error);
+      console.error('Error during account blocking:', error);
       
       // Show error message
-      showNotification('Failed to delete account. Please try again or contact support.', 'error');
+      showNotification('Failed to block account. Please try again or contact support.', 'error');
       
       setIsDeleting(false);
       setShowDeleteModal(false);
@@ -402,7 +402,7 @@ function AccountSettingsPage() {
           document.body.removeChild(notificationDiv);
         }
       }, 300);
-    }, 3000);
+    }, 5000); // Show longer for blocking message
   };
 
   // Loading state
@@ -516,15 +516,15 @@ function AccountSettingsPage() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-red-900 mb-2">Delete Account</h3>
+                    <h3 className="text-lg font-semibold text-red-900 mb-2">Block Account</h3>
                     <p className="text-red-700 text-sm mb-4">
-                      Permanently delete your account and all associated data. This action cannot be undone.
+                      Block your account access while preserving your data. You can contact support to reactivate.
                     </p>
                     <div className="text-sm text-red-600 space-y-1">
-                      <p>• All profile information will be deleted</p>
+                      <p>• Your account will be blocked from signing in</p>
+                      <p>• All profile information will be preserved</p>
                       <p>• All uploaded photos will be removed</p>
-                      <p>• Your user account will be permanently deleted</p>
-                      <p>• Your account will be permanently deactivated</p>
+                      <p>• Contact support to reactivate your account</p>
                     </div>
                   </div>
                   <button
@@ -532,8 +532,8 @@ function AccountSettingsPage() {
                     disabled={isDeleting}
                     className="ml-6 flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg font-medium transition-colors shadow-sm"
                   >
-                    <FiTrash2 className="w-4 h-4" />
-                    Delete Account
+                    <FiUserX className="w-4 h-4" />
+                    Block Account
                   </button>
                 </div>
               </div>
