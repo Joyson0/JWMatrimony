@@ -76,7 +76,7 @@ const DeleteConfirmationModal = ({ isOpen, onConfirm, onCancel, isDeleting }) =>
                   <div>
                     <p className="text-sm font-medium text-orange-800">Your account will be blocked</p>
                     <p className="text-sm text-orange-700 mt-1">
-                      You won't be able to sign in, but your data will be preserved.
+                      You won't be able to sign in, and your data will be cleaned up automatically.
                     </p>
                   </div>
                 </div>
@@ -84,10 +84,11 @@ const DeleteConfirmationModal = ({ isOpen, onConfirm, onCancel, isDeleting }) =>
                 <div className="text-sm text-gray-600 space-y-2">
                   <p className="font-medium">This will:</p>
                   <ul className="list-disc list-inside space-y-1 ml-4">
-                    <li>Block your account access</li>
+                    <li>Block your account access immediately</li>
                     <li>Prevent you from signing in</li>
-                    <li>Keep your profile data intact</li>
-                    <li>Allow account recovery by contacting support</li>
+                    <li>Automatically delete your profile data</li>
+                    <li>Remove all uploaded photos</li>
+                    <li>Clean up all associated data</li>
                   </ul>
                 </div>
               </div>
@@ -252,85 +253,8 @@ function AccountSettingsPage() {
   };
 
   /**
-   * Delete all user photos from storage
-   */
-  const deleteUserPhotos = async (profile) => {
-    const bucketId = import.meta.env.VITE_BUCKET_ID;
-    const deletionPromises = [];
-
-    try {
-      // Delete profile picture
-      if (profile.profilePicFileId) {
-        console.log('Deleting profile picture:', profile.profilePicFileId);
-        deletionPromises.push(
-          storage.deleteFile(bucketId, profile.profilePicFileId).catch(error => {
-            console.warn('Failed to delete profile picture:', error);
-          })
-        );
-      }
-
-      // Delete additional photos
-      if (profile.additionalPhotos && Array.isArray(profile.additionalPhotos)) {
-        profile.additionalPhotos.forEach(photoId => {
-          if (photoId) {
-            console.log('Deleting additional photo:', photoId);
-            deletionPromises.push(
-              storage.deleteFile(bucketId, photoId).catch(error => {
-                console.warn('Failed to delete additional photo:', error);
-              })
-            );
-          }
-        });
-      }
-
-      // Wait for all photo deletions to complete
-      await Promise.all(deletionPromises);
-      console.log('All photos deleted successfully');
-    } catch (error) {
-      console.error('Error during photo deletion:', error);
-      // Don't throw error here - continue with profile deletion even if some photos fail
-    }
-  };
-
-  /**
-   * Call the Appwrite Function to block the user account
-   */
-  const blockUserAccount = async () => {
-    try {
-      // Get current session token
-      const session = await account.getSession('current');
-      const sessionToken = session.secret;
-
-      // Call the Appwrite Function to block the user
-      const functionUrl = `${import.meta.env.VITE_APPWRITE_ENDPOINT}/functions/delete-user/executions`;
-      
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${sessionToken}`,
-          'Content-Type': 'application/json',
-          'X-Appwrite-Project': import.meta.env.VITE_APPWRITE_PROJECT_ID,
-        },
-        body: JSON.stringify({})
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to block user account');
-      }
-
-      const result = await response.json();
-      console.log('User account blocked successfully:', result);
-      
-      return result;
-    } catch (error) {
-      console.error('Error calling block-user function:', error);
-      throw error;
-    }
-  };
-
-  /**
-   * Handle complete account blocking
+   * Handle account blocking using Appwrite's updateStatus
+   * This will trigger the Appwrite Function via user update event
    */
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -338,30 +262,20 @@ function AccountSettingsPage() {
     try {
       console.log('Starting account blocking process...');
 
-      // Step 1: Delete all photos from storage
-      if (userProfile) {
-        await deleteUserPhotos(userProfile);
-      }
+      // Step 1: Block the user account using updateStatus
+      // This will set the user status to false (blocked)
+      console.log('Blocking user account...');
+      await account.updateStatus();
 
-      // Step 2: Delete profile document from database
-      if (userProfile) {
-        console.log('Deleting profile document:', userProfile.$id);
-        await db.profiles.delete(userProfile.$id);
-        console.log('Profile document deleted successfully');
-      }
+      console.log('User account blocked successfully');
 
-      // Step 3: Clear local state and notify navbar
+      // Step 2: Clear local state and notify navbar immediately
       setUser(null);
       setUserProfile(null);
       window.dispatchEvent(new CustomEvent('userLoggedOut'));
 
-      // Step 4: Block user account from Appwrite using Function
-      console.log('Blocking user account from Appwrite...');
-      await blockUserAccount();
-      console.log('User account blocked successfully');
-
-      // Show success message and redirect
-      showNotification('Account blocked successfully. Contact support to reactivate.', 'success');
+      // Show success message
+      showNotification('Account blocked successfully. Data cleanup will happen automatically.', 'success');
       
       // Redirect to home page after a brief delay
       setTimeout(() => {
@@ -518,13 +432,13 @@ function AccountSettingsPage() {
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-red-900 mb-2">Block Account</h3>
                     <p className="text-red-700 text-sm mb-4">
-                      Block your account access while preserving your data. You can contact support to reactivate.
+                      Block your account and automatically clean up all associated data. This action cannot be undone.
                     </p>
                     <div className="text-sm text-red-600 space-y-1">
-                      <p>• Your account will be blocked from signing in</p>
-                      <p>• All profile information will be preserved</p>
-                      <p>• All uploaded photos will be removed</p>
-                      <p>• Contact support to reactivate your account</p>
+                      <p>• Your account will be blocked immediately</p>
+                      <p>• All profile information will be deleted automatically</p>
+                      <p>• All uploaded photos will be removed automatically</p>
+                      <p>• Data cleanup happens via automated process</p>
                     </div>
                   </div>
                   <button
