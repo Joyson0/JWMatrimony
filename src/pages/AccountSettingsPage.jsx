@@ -293,7 +293,7 @@ function AccountSettingsPage() {
   };
 
   /**
-   * Call the server-side edge function to delete the user account
+   * Call the Appwrite Function to delete the user account
    */
   const deleteUserAccount = async () => {
     try {
@@ -301,13 +301,17 @@ function AccountSettingsPage() {
       const session = await account.getSession('current');
       const sessionToken = session.secret;
 
-      // Call the edge function to delete the user
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
+      // Call the Appwrite Function to delete the user
+      const functionUrl = `${import.meta.env.VITE_APPWRITE_ENDPOINT}/functions/delete-user/executions`;
+      
+      const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionToken}`,
           'Content-Type': 'application/json',
+          'X-Appwrite-Project': import.meta.env.VITE_APPWRITE_PROJECT_ID,
         },
+        body: JSON.stringify({})
       });
 
       if (!response.ok) {
@@ -320,7 +324,7 @@ function AccountSettingsPage() {
       
       return result;
     } catch (error) {
-      console.error('Error calling delete-user edge function:', error);
+      console.error('Error calling delete-user function:', error);
       throw error;
     }
   };
@@ -351,7 +355,7 @@ function AccountSettingsPage() {
       setUserProfile(null);
       window.dispatchEvent(new CustomEvent('userLoggedOut'));
 
-      // Step 4: Delete user account from Appwrite using server-side function
+      // Step 4: Delete user account from Appwrite using Function
       console.log('Deleting user account from Appwrite...');
       await deleteUserAccount();
       console.log('User account deleted successfully');

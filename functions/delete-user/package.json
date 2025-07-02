@@ -1,0 +1,15 @@
+{
+  "name": "delete-user-function",
+  "version": "1.0.0",
+  "description": "Appwrite Function to delete user accounts",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "keywords": ["appwrite", "function", "user", "delete"],
+  "author": "JW Matrimony",
+  "license": "MIT"
+}
